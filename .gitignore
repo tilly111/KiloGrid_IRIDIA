@@ -67,3 +67,5 @@ data/
 
 # do not track log data 
 log/
+
+*.R
