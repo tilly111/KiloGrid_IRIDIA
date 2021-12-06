@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE kilogui_info>
+<kilogui_info>
+    <last_updated>Mon Dec 6 13:05:26 2021</last_updated>
+    <last_experiment_config_file>C:/kilogrid_software/kilogrid_software/src/Experiments/test1/kg_conf.kconf</last_experiment_config_file>
+    <last_kilobot_controller_program>C:/kilogrid_software/kilogrid_software/src/Experiments/test1/Kilobot/build/kilo.hex</last_kilobot_controller_program>
+    <last_module_controller_program>C:/kilogrid_software/kilogrid_software/src/Experiments/test1/Module/build/Module.hex</last_module_controller_program>
+    <last_boud_rate>256000</last_boud_rate>
+</kilogui_info>

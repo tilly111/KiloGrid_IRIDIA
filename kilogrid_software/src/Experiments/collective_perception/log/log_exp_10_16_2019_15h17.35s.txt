@@ -1,0 +1,238 @@
+Bootpage request: 0
+Bootpage request: 1
+Bootpage request: 2
+Bootpage request: 3
+Bootpage request: 4
+Bootpage request: 5
+Bootpage request: 6
+Bootpage request: 7
+Bootpage request: 8
+Bootpage request: 9
+Bootpage request: 10
+Bootpage request: 11
+Bootpage request: 12
+Bootpage request: 13
+Bootpage request: 14
+Bootpage request: 15
+Bootpage request: 16
+Bootpage request: 17
+Bootpage request: 18
+Bootpage request: 19
+Bootpage request: 20
+Bootpage request: 21
+Bootpage request: 22
+Bootpage request: 23
+Bootpage request: 24
+Bootpage request: 25
+Bootpage request: 26
+Bootpage request: 27
+Bootpage request: 28
+Bootpage request: 29
+Bootpage request: 30
+Bootpage request: 31
+Bootpage request: 32
+Bootpage request: 33
+Bootpage request: 34
+Bootpage request: 35
+Bootpage request: 36
+Bootpage request: 37
+Bootpage request: 38
+Bootpage request: 39
+Bootpage request: 40
+Bootpage request: 41
+Bootpage request: 42
+Bootpage request: 43
+Bootpage request: 44
+Bootpage request: 45
+Bootpage request: 46
+Bootpage request: 47
+Bootpage request: 48
+Bootpage request: 49
+Bootpage request: 50
+Bootpage request: 51
+Bootpage request: 52
+Bootpage request: 53
+Bootpage request: 54
+Bootpage request: 55
+Bootpage request: 56
+Bootpage request: 57
+Bootpage request: 58
+Bootpage request: 59
+Bootpage request: 60
+Bootpage request: 61
+Bootpage request: 62
+Bootpage request: 63
+Bootpage request: 64
+Bootpage request: 65
+Bootpage request: 66
+Bootpage request: 67
+Bootpage request: 68
+Bootpage request: 69
+Bootpage request: 70
+Bootpage request: 71
+Bootpage request: 72
+Bootpage request: 73
+Bootpage request: 74
+Bootpage request: 75
+Bootpage request: 76
+Bootpage request: 77
+Bootpage request: 78
+Bootpage request: 79
+Bootpage request: 80
+Bootpage request: 81
+Bootpage request: 82
+Bootpage request: 83
+Bootpage request: 84
+Bootpage request: 85
+Bootpage request: 86
+Bootpage request: 87
+Bootpage request: 88
+Bootpage request: 89
+Bootpage request: 90
+Bootpage request: 91
+Bootpage request: 92
+Bootpage request: 93
+Bootpage request: 0
+Bootpage request: 1
+Bootpage request: 2
+Bootpage request: 3
+Bootpage request: 4
+Bootpage request: 5
+Bootpage request: 6
+Bootpage request: 7
+Bootpage request: 8
+Bootpage request: 9
+Bootpage request: 10
+Bootpage request: 11
+Bootpage request: 12
+Bootpage request: 13
+Bootpage request: 14
+Bootpage request: 15
+Bootpage request: 16
+Bootpage request: 17
+Bootpage request: 18
+Bootpage request: 19
+Bootpage request: 20
+Bootpage request: 21
+Bootpage request: 22
+Bootpage request: 23
+Bootpage request: 24
+Bootpage request: 25
+Bootpage request: 26
+Bootpage request: 27
+Bootpage request: 28
+Bootpage request: 29
+Bootpage request: 30
+Bootpage request: 31
+Bootpage request: 32
+Bootpage request: 33
+Bootpage request: 34
+Bootpage request: 35
+Bootpage request: 36
+Bootpage request: 37
+Bootpage request: 38
+Bootpage request: 39
+Bootpage request: 40
+Bootpage request: 41
+Bootpage request: 42
+Bootpage request: 43
+Bootpage request: 44
+Bootpage request: 45
+Bootpage request: 46
+Bootpage request: 47
+Bootpage request: 48
+Bootpage request: 49
+Bootpage request: 50
+Bootpage request: 51
+Bootpage request: 52
+Bootpage request: 53
+Bootpage request: 54
+Bootpage request: 55
+Bootpage request: 56
+Bootpage request: 57
+Bootpage request: 58
+Bootpage request: 59
+Bootpage request: 60
+Bootpage request: 61
+Bootpage request: 62
+Bootpage request: 63
+Bootpage request: 64
+Bootpage request: 65
+Bootpage request: 66
+Bootpage request: 67
+Bootpage request: 68
+Bootpage request: 69
+Bootpage request: 70
+Bootpage request: 71
+Bootpage request: 72
+Bootpage request: 73
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+2	16	3	0	2069/7	4e	00	00	00	00	00	00
+2	16	2	3	2069/7	4e	00	01	01	00	00	00
+2	16	0	7	2069/7	4e	00	01	01	00	00	00
+2	16	2	10	2069/7	4e	00	01	01	00	00	00
+2	15	1	20	2069/7	4e	00	01	01	00	00	00
+2	15	3	24	2069/7	4e	00	01	01	00	00	00
+3	14	0	29	2069/7	4e	00	01	01	00	00	00
+3	15	2	31	2069/7	4e	00	01	01	00	00	00
+2	14	3	40	2069/7	4e	00	01	01	00	00	00
+2	13	0	42	2069/7	4e	00	01	01	00	00	00
+2	14	2	42	2069/7	4e	00	01	01	00	00	00
+2	14	0	47	2069/7	4e	00	01	01	00	00	00
+1	14	3	48	2069/7	4e	00	01	01	00	00	00
+1	14	1	53	2069/7	4e	00	01	01	00	00	00
+1	15	3	59	2069/7	4e	00	01	01	00	00	00
+1	15	2	61	2069/7	4e	00	01	01	00	00	00
+1	14	1	65	2069/7	4e	00	01	01	00	00	00
+1	14	3	69	2069/7	4e	00	01	01	00	00	00
+1	14	3	71	2069/7	4e	00	01	01	00	00	00
+2	14	2	79	2069/7	4e	00	01	01	00	00	00
+2	13	1	80	2069/7	4e	00	01	01	00	00	00
+3	14	0	87	2069/7	4e	00	01	01	00	00	00
+3	14	3	89	2069/7	4e	00	01	01	00	00	00
+3	14	1	93	2069/7	4e	00	01	01	00	00	00
+4	14	0	98	2069/7	4e	00	01	01	00	00	00
+5	14	0	109	2069/7	4e	00	01	01	00	00	00
+5	14	3	111	2069/7	4e	00	01	01	00	00	00
+6	14	0	113	2069/7	4e	00	01	01	00	00	00
+6	14	2	119	2069/7	4e	00	01	01	00	00	00
+7	13	2	129	2069/7	4e	00	01	01	00	00	00
+7	13	3	135	2069/7	4e	00	01	01	00	00	00
+7	12	1	139	2069/7	4e	00	01	01	00	00	00
+7	12	3	143	2069/7	4e	00	01	01	00	00	00
+8	12	2	143	2069/7	4e	00	01	01	00	00	00
+7	12	1	147	2069/7	4e	00	01	01	00	00	00
+7	12	0	149	2069/7	4e	00	01	01	00	00	00
+7	13	0	155	2069/7	4e	00	01	01	00	00	00
+6	13	1	161	2069/7	4e	00	01	01	00	00	00
+6	14	0	167	2069/7	4e	00	01	01	00	00	00
+6	15	2	175	2069/7	4e	00	01	01	00	00	00
+5	14	1	177	2069/7	4e	00	01	01	00	00	00
+6	14	0	177	2069/7	4e	00	01	01	00	00	00
+5	14	3	181	2069/7	4e	00	01	01	00	00	00
+5	14	2	183	2069/7	4e	00	01	01	00	00	00
+3	13	2	193	2069/7	4e	00	01	01	00	00	00
+3	12	3	195	2069/7	4e	00	01	01	00	00	00
+3	12	2	197	2069/7	4e	00	01	01	00	00	00
+3	11	1	201	2069/7	4e	00	01	01	00	00	00
+3	11	0	204	2069/7	4e	00	01	01	00	00	00
+3	11	3	205	2069/7	4e	00	01	01	00	00	00
+3	11	3	207	2069/7	4e	00	01	01	00	00	00
+4	11	2	211	2069/7	4e	00	01	01	00	00	00
+4	10	2	217	2069/7	4e	00	01	01	00	00	00
+3	10	3	221	2069/7	4e	00	01	01	00	00	00
+3	10	1	225	2069/7	4e	00	01	01	00	00	00
+3	10	0	228	2069/7	4e	00	01	01	00	00	00
+2	11	3	236	2069/7	4e	00	01	01	00	00	00
+2	11	2	237	2069/7	4e	00	01	01	00	00	00
+2	11	1	239	2069/7	4e	00	01	01	00	00	00
+3	12	2	249	2069/7	4e	00	01	01	00	00	00
+3	12	1	251	2069/7	4e	00	01	01	00	00	00
+4	13	2	256	2069/7	4e	00	01	01	00	00	00
+4	13	2	257	2069/7	4e	00	01	01	00	00	00
+4	13	3	259	2069/7	4e	00	02	01	32	00	00
+4	13	3	262	2069/7	4e	00	02	01	32	00	00
+4	15	3	312	2069/7	4e	00	02	01	32	00	00
+2	17	2	373	2069/7	4e	00	02	01	32	00	00
+2	13	1	405	2069/7	4e	00	02	01	32	00	00
+5	11	2	433	2069/7	4e	00	02	01	32	00	00

@@ -1,0 +1,9 @@
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+1	4	2	0		ff	02	00	00	00	00	00
+0	4	1	2		ff	02	00	00	00	00	00
+1	5	2	6		ff	02	01	01	00	00	00
+1	5	2	10		ff	02	01	01	00	00	00
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+1	8	0	5	2059/0	7c	02	01	01	00	00	00
+0	8	3	7	2059/0	7c	02	01	01	00	00	00
+1	8	2	7	2059/0	7c	02	01	01	00	00	00

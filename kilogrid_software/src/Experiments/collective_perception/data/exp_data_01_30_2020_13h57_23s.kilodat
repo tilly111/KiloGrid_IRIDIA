@@ -1,0 +1,4 @@
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+0	4	0	1		255	3	0	0	0	0	0
+0	4	2	3		255	3	1	2	0	0	0
+0	4	3	8		255	3	1	2	0	0	0

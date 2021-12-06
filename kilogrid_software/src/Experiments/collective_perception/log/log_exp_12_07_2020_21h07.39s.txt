@@ -1,0 +1,6 @@
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
+modulex	moduley	c	timestamp	kilobot_sn	data0	data1	data2	data3	data4	data5	data6
