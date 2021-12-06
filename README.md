@@ -4,7 +4,7 @@
 
 ### Starting the KiloGui
 
-First you have to open the gui project. Its located at 
+First you have to open the gui project. It is located at 
 
 ```
 C:\kilogrid_software\kilogrid_software\src\KiloGUI
@@ -129,7 +129,7 @@ module:0-1
 x:10-11
 ```
 
-
+### TODO
 
 ## General advice for running experiments 
 
