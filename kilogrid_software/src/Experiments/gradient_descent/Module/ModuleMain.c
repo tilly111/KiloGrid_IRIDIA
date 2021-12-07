@@ -10,17 +10,30 @@
 
 #include "../communication.h"
 
-volatile uint8_t cell_colour[4] = {0, 0, 0, 0};
-uint8_t colour2[3] = {0x68, 0x4C, 0x75};
+volatile uint8_t cell_x[4] = {0, 0, 0, 0};
+volatile uint8_t cell_y[4] = {0, 0, 0, 0};
+volatile uint8_t cell_role[4] = {0, 0, 0, 0};
+
+
 cell_num_t cell_id[4] = {CELL_00, CELL_01, CELL_02, CELL_03};
 
 
 void setup()
 {
-    cell_colour[0] = (configuration[0]);
-    cell_colour[1] = (configuration[1]);
-    cell_colour[2] = (configuration[2]);
-    cell_colour[3] = (configuration[3]);
+  cell_x[0] = (configuration[0]);
+  cell_x[1] = (configuration[0]);
+  cell_x[2] = (configuration[0]);
+  cell_x[3] = (configuration[0]);
+
+  cell_y[0] = (configuration[1]);
+  cell_y[1] = (configuration[1]);
+  cell_y[2] = (configuration[1]);
+  cell_y[3] = (configuration[1]);
+
+  cell_role[0] = (configuration[2]);
+  cell_role[1] = (configuration[2]);
+  cell_role[2] = (configuration[2]);
+  cell_role[3] = (configuration[2]);
 }
 
 void loop()
@@ -28,19 +41,16 @@ void loop()
 	for(int i = 0; i < 4; ++i)
 	{
 
-		switch(cell_colour[i])
+		switch(cell_role[i])
 		{
 		 case 0:
 		   set_LED_with_brightness(cell_id[i], BLUE, HIGH);
 		 break;
-		 case 1:
+		 case 10:
 		   set_LED_with_brightness(cell_id[i], GREEN, HIGH);
 		 break;
-     case 2:
+     case 42:
        set_LED_with_brightness(cell_id[i], RED, HIGH);
-     break;
-     case 2:
-       set_LED_with_brightness(cell_id[i], CYAN, HIGH);
      break;
 		 default:
 		 break;
