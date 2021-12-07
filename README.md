@@ -156,6 +156,7 @@ states
 
 The robots need to run before the kilogrid, e.g., start the robot controller, than the kilogrid controller (probably you have to send a start/init msg to the robots)
 
+First start the kilogrid, than the kilobot toolkit - otherwise you get a connection error (can be fixed by disconnecting and then reconnecting)
 
 ### Useful weblinks
 
