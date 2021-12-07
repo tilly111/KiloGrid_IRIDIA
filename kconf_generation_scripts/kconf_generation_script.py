@@ -17,9 +17,9 @@ def make_walls(grid):
 
 def make_tree(grid):
     begin = [4, 3, 2, 4, 3, 2, 4, 3, 2, 4, 3, 2, 4, 4, 4, 4, 4, 4]
-    end =   [6, 7, 8, 6, 7, 8, 6, 7, 8, 6, 7, 8, 6, 6, 6, 6,6,6]
+    end =   [6, 7, 8, 6, 7, 8, 6, 7, 8, 6, 7, 8, 6, 6, 6, 6, 6, 6]
     for y in range(16):
-        grid[begin[y]:end[y], y+2] = np.ones((end[y]-begin[y],)) * 24
+        grid[begin[y]:end[y], 17-y] = np.ones((end[y]-begin[y],)) * 24
 
 
     return grid
