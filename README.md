@@ -157,6 +157,10 @@ states
 The robots need to run before the kilogrid, e.g., start the robot controller, than the kilogrid controller (probably you have to send a start/init msg to the robots)
 
 
+### Useful weblinks
 
+https://diode.group.shef.ac.uk/kilobots/index.php/Kilobots
+
+https://kilobotics.com/docs/index.html
 
 
