@@ -56,6 +56,7 @@ void loop()
      IR_message_tx[i].type = 1;
      IR_message_tx[i].data[0] = cell_x[i];
      IR_message_tx[i].data[1] = cell_y[i];
+     IR_message_tx[i].data[2] = cell_role[i];
 
      set_IR_message(&IR_message_tx[i], i);
 
@@ -80,6 +81,8 @@ void loop()
 int main() {
     module_init();
 
+    module_IR_message_rx = IR_rx;
+    
     module_start(setup, loop);
 
     return 0;

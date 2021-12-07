@@ -5,8 +5,8 @@
 #include <math.h>
 #include "kilob_tracking.h"
 #include "kilo_rand_lib.h"
-//#include "../communication.h"
-//#include "kilob_messaging.h"
+#include "../communication.h"
+#include "kilob_messaging.h"
 //#include "kilob_random_walk.h"
 
 #define PI 3.14159265358979323846
@@ -39,20 +39,20 @@
 typedef enum {
     STOP = 0,
     FORWARD,
-    TURN_LEFT,
-    TURN_RIGHT,
+    TURN_LEFT_MY,
+    TURN_RIGHT_MY
 } motion_t;
 
 // Enum for boolean flags
 typedef enum {
     false = 0,
-    true = 1,
+    true = 1
 } bool;
 
 // Emum for new way point calculation
 typedef enum {
     SELECT_NEW_WAY_POINT = 1,
-    UPDATE_WAY_POINT = 0,
+    UPDATE_WAY_POINT = 0
 } waypoint_option;
 
 
@@ -68,8 +68,11 @@ uint8_t Robot_GPS_Y_last;  // last y position  -> needed for calculating the ori
 motion_t current_motion_type = STOP;  // current type of motion
 
 // robot goal variables
-uint8_t Goal_GPS_X = 12;  // x pos of goal
-uint8_t Goal_GPS_Y = 14;  // y pos of goal
+uint8_t Goal_GPS_X = 6;  // x pos of goal
+uint8_t Goal_GPS_Y = 7;  // y pos of goal
+bool update_orientation = false;
+uint32_t update_orientation_ticks = 0;
+const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 64;
 
 const uint8_t MIN_DIST = 4;  // min distance the new way point has to differ from the last one
 const uint32_t MAX_WAYPOINT_TIME = 3600; // about 2 minutes -> after this time choose new way point
@@ -77,8 +80,9 @@ uint32_t lastWaypointTime;  // time when the last way point was chosen
 
 // stuff for motion
 const bool CALIBRATED = true;  // flag if robot is calibrated??
-const uint8_t MAX_TURNING_TICKS = 37; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
-const uint32_t MAX_STRAIGHT_TICKS = 300;
+const uint8_t TURNING_TICKS = 130; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
+const uint8_t MANY_TURNING_TICKS = 250; 
+const uint32_t MAX_STRAIGHT_TICKS = 150;
 
 uint32_t turning_ticks = 0;  // TODO chnage back to unsigned int?????
 uint32_t last_motion_ticks = 0;
@@ -87,17 +91,21 @@ uint32_t straight_ticks = 0;
 // Wall Avoidance manouvers
 uint32_t wallAvoidanceCounter = 0; // to decide when the robot is stuck...
 bool stuck = false;  // needed if the robot gets stuck
+bool hit_wall = false;
+
+tracking_user_data_t tracking_data;
 
 
 /*-----------------------------------------------------------------------------------------------*/
 /* Arena variables                                                                               */
 /*-----------------------------------------------------------------------------------------------*/
-const uint8_t GPS_MAX_CELL_X = 20;
-const uint8_t GPS_MAX_CELL_Y = 40;
+const uint8_t GPS_MAX_CELL_X = 10;
+const uint8_t GPS_MAX_CELL_Y = 20;
 
 // communication
 uint8_t received_x = 0;
 uint8_t received_y = 0;
+uint8_t received_role = 0;
 bool received_msg_kilogrid = false;
 
 
@@ -107,11 +115,21 @@ bool received_msg_kilogrid = false;
 /*-----------------------------------------------------------------------------------------------*/
 void NormalizeAngle(double* angle){
     while(*angle>180){
-        *angle=*angle-360;
+        *angle=*angle-360.0;
     }
     while(*angle<-180){
-        *angle=*angle+360;
+        *angle=*angle+360.0;
     }
+}
+
+double normalize_angle(double angle){
+    if(angle>180){
+        angle=angle-360.0;
+    }
+    if(angle<-180){
+        angle=angle+360.0;
+    }
+    return angle;
 }
 
 
@@ -129,7 +147,7 @@ void set_motion(motion_t new_motion_type) {
                 if (CALIBRATED) set_motors(kilo_straight_left,kilo_straight_right);
                 else set_motors(67,67);
                 break;
-            case TURN_LEFT:
+            case TURN_LEFT_MY:
                 spinup_motors();
                 if (CALIBRATED){
                     uint8_t leftStrenght = kilo_turn_left;
@@ -144,7 +162,7 @@ void set_motion(motion_t new_motion_type) {
                     set_motors(70,0);
                 }
                 break;
-            case TURN_RIGHT:
+            case TURN_RIGHT_MY:
                 spinup_motors();
                 if (CALIBRATED){
                     uint8_t rightStrenght = kilo_turn_right;
@@ -174,16 +192,16 @@ void set_motion(motion_t new_motion_type) {
 /*-----------------------------------------------------------------------------------------------*/
 void check_if_against_a_wall() {
     // handles target when we are at a wall?
-    if(hit_wall){
-        // drive towards the map center if coliding with a wall??
-        if (wallAvoidanceCounter<18) wallAvoidanceCounter += 1;
-        else wallAvoidanceCounter = 1;
-    } else {
-        if (wallAvoidanceCounter > 0){ // flag when the robot hit a wall -> after select new waypoint -> else ignore
-            random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
-        }
-        wallAvoidanceCounter = 0;
-    }
+//    if(hit_wall){
+//        // drive towards the map center if coliding with a wall??
+//        if (wallAvoidanceCounter<18) wallAvoidanceCounter += 1;
+//       else wallAvoidanceCounter = 1;
+//    } else {
+//        if (wallAvoidanceCounter > 0){ // flag when the robot hit a wall -> after select new waypoint -> else ignore
+//            random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
+//        }
+//        wallAvoidanceCounter = 0;
+//    }
 }
 
 
@@ -195,11 +213,14 @@ void GoToGoalLocation() {
     // if hit wall do the hit wall case... also stuck ensures that they drive straight forward for
     // a certain amount of time
     if (update_orientation){
+       // set_color(RGB(3,0,0));
+       // delay(200);
+       // set_color(RGB(0,0,0));
         update_orientation = false;
         
         // calculates the difference thus we can see if we have to turn left or right
-        double angletogoal = atan2(Goal_GPS_Y-Robot_GPS_Y,Goal_GPS_X-Robot_GPS_X)/PI*180-Robot_orientation;
-        NormalizeAngle(&angletogoal);
+        double angletogoal = atan2(Goal_GPS_Y-Robot_GPS_Y,Goal_GPS_X-Robot_GPS_X)/PI*180-(double)(Robot_orientation);
+        angletogoal = normalize_angle(angletogoal);
         
         // see if we are on track
         bool right_direction = false; // flag set if we move towards the right celestial direction
@@ -220,16 +241,21 @@ void GoToGoalLocation() {
         }else if (Robot_GPS_Y < Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){  // right upper case
             if(Robot_orientation == 45){ right_direction = true;}
         }else{
-            printf("[%d] ERROR - something wrong in drive cases \n", kilo_uid);
+           // tracking_data.byte[3] = 4;
+            //printf("[%d] ERROR - something wrong in drive cases \n", kilo_uid);
         }
         
         // if we are not in the right direction -> turn
         if (!right_direction){
             // right from target
-            if ((int)angletogoal < 0 ) set_motion(TURN_RIGHT);
+            if ((int)angletogoal < 0 ) set_motion(TURN_RIGHT_MY);
             // left from target
-            else if ((int)angletogoal > 0) set_motion(TURN_LEFT);
-            turning_ticks= MAX_TURNING_TICKS;
+            else if ((int)angletogoal > 0) set_motion(TURN_LEFT_MY);
+            if (abs(angletogoal) < 120){
+                turning_ticks = TURNING_TICKS;
+            } else {
+                turning_ticks = MANY_TURNING_TICKS;
+            }
             last_motion_ticks = kilo_ticks;
 
         }else{
@@ -239,13 +265,13 @@ void GoToGoalLocation() {
     // needed at least for the beginning so that the robot starts moving into the right direction
     // but also to update after turning for a while -> move then straight to update orientation
     switch( current_motion_type ) {
-        case TURN_LEFT:
-        case TURN_RIGHT:
+        case TURN_LEFT_MY:
+        case TURN_RIGHT_MY:
             if( kilo_ticks > last_motion_ticks + turning_ticks) {
-                /* start moving forward */
+                // start moving forward 
                 last_motion_ticks = kilo_ticks;  // fixed time FORWARD
                 if (hit_wall){  // only enforce straight movement when trying to escape a wall
-                    straight_ticks = rand() % MAX_STRAIGHT_TICKS + 150;
+                    straight_ticks = rand() % MAX_STRAIGHT_TICKS + 75;
                     stuck = true;
                 }
                 set_motion(FORWARD);
@@ -257,7 +283,6 @@ void GoToGoalLocation() {
                 stuck = false;
             }
             break;
-
         case STOP:
         default:
             set_motion(STOP);
@@ -267,26 +292,32 @@ void GoToGoalLocation() {
 void update_robot_state(){
     // update reading of sensor - also check for hit_wall flag - setting it inside callback
     // function could lead to inconsistancy!!
-//    if (received_option == 42){  // robot sensed wall -> dont update the received option
-//        hit_wall = true;
-//    }else{
-//        current_ground = received_option;
-//        hit_wall = false;
-//    }
-    
-    // update current and last position
-    if (received_x != Robot_GPS_X || received_y != Robot_GPS_Y){
-        Robot_GPS_X_last = Robot_GPS_X;
-        Robot_GPS_X = received_x;
-        Robot_GPS_Y_last = Robot_GPS_Y;
-        Robot_GPS_Y = received_y;
-        update_orientation = true;
+    if (received_role == 42){  // robot sensed wall -> dont update the received option
+        hit_wall = true;
+    }else{
+        hit_wall = false;
     }
     
-    // calculate orientation of the robot based on the last and current visited cell -> rough estimate
-    double angleOrientation = atan2(Robot_GPS_Y-Robot_GPS_Y_last, Robot_GPS_X-Robot_GPS_X_last)/PI*180;
-    NormalizeAngle(&angleOrientation);
-    Robot_orientation = (uint32_t) angleOrientation;
+    // update current and last position
+    if (kilo_ticks > update_orientation_ticks + UPDATE_ORIENTATION_MAX_TICKS){
+        update_orientation_ticks = kilo_ticks;
+        if ((received_x != Robot_GPS_X || received_y != Robot_GPS_Y) && (received_x!=Robot_GPS_X_last || received_y != Robot_GPS_Y_last)){
+            Robot_GPS_X_last = Robot_GPS_X;
+            Robot_GPS_X = received_x;
+            Robot_GPS_Y_last = Robot_GPS_Y;
+            Robot_GPS_Y = received_y;
+            update_orientation = true;
+           // set_color(RGB(0,0,3));
+           // delay(200);
+           // set_color(RGB(0,0,0));
+        
+            // calculate orientation of the robot based on the last and current visited cell -> rough estimate
+            double angleOrientation = atan2(Robot_GPS_Y-Robot_GPS_Y_last, Robot_GPS_X-Robot_GPS_X_last)/PI*180;
+            angleOrientation = normalize_angle(angleOrientation);
+            Robot_orientation = (uint32_t) angleOrientation;
+        }    
+    }
+    
     
     received_msg_kilogrid = false;
 }
@@ -295,10 +326,12 @@ void update_robot_state(){
 /* Init function                                                                                 */
 /*-----------------------------------------------------------------------------------------------*/
 void setup(){
+    kilob_tracking_init();
+    tracking_data.byte[0] = kilo_uid;
     // Initialise motors
     set_motors(0,0);
     
-    // Initialise random seed
+    set_motion(FORWARD);
     
     // Initialise motion variables
     last_motion_ticks = rand() % MAX_STRAIGHT_TICKS + 1;
@@ -320,10 +353,16 @@ void setup(){
 /*-------------------------------------------------------------------*/
 /* Callback function for message reception                           */
 /*-------------------------------------------------------------------*/
-void message_rx( message_t *msg, distance_measurement_t *d ) {
-    received_x = msg->data[0];
-    received_y = msg->data[1];
-    received_msg_kilogrid = true;
+void message_rx( IR_message_t *msg, distance_measurement_t *d ) {
+    if (msg->type == 1){
+        received_x = msg->data[0];
+        received_y = msg->data[1];
+        received_role = msg->data[2];
+        received_msg_kilogrid = true;
+        //set_color(RGB(3,0,0));
+        //delay(200);
+        //set_color(RGB(0,0,0));
+    }
     return;
 }
 
@@ -331,7 +370,7 @@ void message_rx( message_t *msg, distance_measurement_t *d ) {
 /* Callback function for message transmission - this methods do not need to be implemented for   */
 /* the simulation bc inter robot communication is handled by the kilogrid                        */
 /*-----------------------------------------------------------------------------------------------*/
-message_t *message_tx() {
+IR_message_t *message_tx() {
     return NULL;
 }
 
@@ -347,11 +386,41 @@ void tx_message_success() {
 /* Main loop                                                                                     */
 /*-----------------------------------------------------------------------------------------------*/
 void loop() {
-    if(received_msg_kilogrid){
-        update_position();
-    }
-    // move towards random location
-    GoToGoalLocation();
+    // goal reached
+    if(Robot_GPS_X == Goal_GPS_X && Robot_GPS_Y == Goal_GPS_Y){
+        set_motors(0,0);
+    }else{
+        // main loop
+        if(received_msg_kilogrid){
+            update_robot_state();
+            
+            //set_color(RGB(3,0,0));
+        }
+        
+        // move towards random location
+        GoToGoalLocation();
+        
+        switch(current_motion_type){
+            case FORWARD:
+                set_color(RGB(0,3,0));
+                break;
+            case TURN_RIGHT_MY:
+                set_color(RGB(3,0,0));
+                break;
+            case TURN_LEFT_MY:
+                set_color(RGB(0,0,3));
+                break;
+            case STOP:
+            default:
+                set_color(RGB(3,3,3));
+                        
+        }
+    }    
+    tracking_data.byte[1] = received_x;
+    tracking_data.byte[2] = received_y;
+    tracking_data.byte[3] = Robot_GPS_X;
+    tracking_data.byte[4] = Robot_GPS_Y;
+    kilob_tracking(&tracking_data);
 
 }
 
@@ -360,6 +429,7 @@ void loop() {
 /*-----------------------------------------------------------------------------------------------*/
 int main(){
     kilo_init();  // init hardware of the kilobot
+    utils_init();
     kilo_message_tx = message_tx;  // register callback - pointer to message which should be send - roughly every 0.5 s
     kilo_message_tx_success = tx_message_success;  // triggered when transmission is successfull
     kilo_message_rx = message_rx;  // callback for received messages
