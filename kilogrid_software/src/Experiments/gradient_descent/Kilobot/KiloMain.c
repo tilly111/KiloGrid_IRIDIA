@@ -69,10 +69,10 @@ motion_t current_motion_type = STOP;  // current type of motion
 
 // robot goal variables
 uint8_t Goal_GPS_X = 6;  // x pos of goal
-uint8_t Goal_GPS_Y = 7;  // y pos of goal
+uint8_t Goal_GPS_Y = 6;  // y pos of goal
 bool update_orientation = false;
 uint32_t update_orientation_ticks = 0;
-const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 64;
+const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 32;
 
 const uint8_t MIN_DIST = 4;  // min distance the new way point has to differ from the last one
 const uint32_t MAX_WAYPOINT_TIME = 3600; // about 2 minutes -> after this time choose new way point
@@ -80,8 +80,8 @@ uint32_t lastWaypointTime;  // time when the last way point was chosen
 
 // stuff for motion
 const bool CALIBRATED = true;  // flag if robot is calibrated??
-const uint8_t TURNING_TICKS = 130; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
-const uint8_t MANY_TURNING_TICKS = 250; 
+const uint8_t TURNING_TICKS = 60; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
+const uint8_t MANY_TURNING_TICKS = 130; 
 const uint32_t MAX_STRAIGHT_TICKS = 150;
 
 uint32_t turning_ticks = 0;  // TODO chnage back to unsigned int?????
