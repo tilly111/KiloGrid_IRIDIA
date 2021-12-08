@@ -1,5 +1,5 @@
 #include <avr/io.h>
-#include <avr/wdt.h> 
+#include <avr/wdt.h>
 #include <util/delay.h>     // delay macros
 #include <avr/interrupt.h>
 
@@ -13,7 +13,7 @@
 volatile uint8_t cell_x[4] = {0, 0, 0, 0};
 volatile uint8_t cell_y[4] = {0, 0, 0, 0};
 volatile uint8_t cell_role[4] = {0, 0, 0, 0};
-volatile uint8_t cell_msg[4] = {0, 0, 0, 0};
+volatile uint8_t cell_colour[4] = {0, 0, 0, 0};
 
 cell_num_t cell_id[4] = {CELL_00, CELL_01, CELL_02, CELL_03};
 
@@ -46,11 +46,16 @@ void setup(){
     cell_role[1] = (configuration[2]);
     cell_role[2] = (configuration[2]);
     cell_role[3] = (configuration[2]);
+
+    cell_colour[0] = (configuration[3]);
+    cell_colour[1] = (configuration[4]);
+    cell_colour[2] = (configuration[5]);
+    cell_colour[3] = (configuration[6]);
 }
 
 void loop(){
 	for(int i = 0; i < 4; ++i){
-	
+
         IR_message_tx[i].type = 1;
         IR_message_tx[i].data[0] = cell_x[i];
         IR_message_tx[i].data[1] = cell_y[i];
@@ -58,16 +63,18 @@ void loop(){
 
         set_IR_message(&IR_message_tx[i], i);
 
-        switch(cell_role[i]){
-            case 0:
+        switch(cell_colour[i]){
+            case 1:
                 set_LED_with_brightness(cell_id[i], BLUE, HIGH);
                 break;
-            case 24:
+            case 2:
                 set_LED_with_brightness(cell_id[i], GREEN, HIGH);
                 break;
-            case 42:
+            case 3:
                 set_LED_with_brightness(cell_id[i], RED, HIGH);
                 break;
+            case 4:
+                set_LED_with_brightness(cell_id[i], CYAN, HIGH);
             default:
                 break;
            }
@@ -77,10 +84,10 @@ void loop(){
 
 int main() {
     module_init();
-    
+
     module_IR_message_rx = IR_rx;
-    
+
     module_start(setup, loop);
-	
+
     return 0;
 }
