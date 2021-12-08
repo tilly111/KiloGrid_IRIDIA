@@ -46,6 +46,7 @@ if __name__ == "__main__":
     im = cv.imread("pixil-frame-0-2.png")
     gray = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
     gray = gray.transpose()
+    gray = np.fliplr(gray)
     gray[gray == 99] = 3
     gray[gray == 87] = 1
     gray[gray == 135] = 2
