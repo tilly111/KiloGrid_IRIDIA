@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import cv2 as cv
 
 # Parameters to choose
-conf_file_name = 'konf_christmas_stuff'
+conf_file_name = 'christmas_final'
 wall_value = 42
 target_value = 10
 
