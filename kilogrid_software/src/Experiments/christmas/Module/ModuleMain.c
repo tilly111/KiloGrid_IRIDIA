@@ -74,7 +74,10 @@ void loop(){
                 set_LED_with_brightness(cell_id[i], RED, HIGH);
                 break;
             case 4:
-                set_LED_with_brightness(cell_id[i], CYAN, HIGH);
+                set_LED_with_brightness(cell_id[i], LED_OFF, HIGH);
+                break;
+            case 5:
+                set_LED_with_brightness(cell_id[i], YELLOW, HIGH);
             default:
                 break;
            }

@@ -49,7 +49,7 @@ motion_t current_motion_type = STOP;  // current type of motion
 
 // robot goal variables
 uint8_t Goal_GPS_X = 5;  // x pos of goal
-uint8_t Goal_GPS_Y = 0;  // y pos of goal
+uint8_t Goal_GPS_Y = 18;  // y pos of goal
 bool update_orientation = false;
 uint32_t update_orientation_ticks = 0;
 const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 32;
@@ -90,6 +90,7 @@ bool received_msg_kilogrid = false;
 
 // dirty hack
 bool init = true;
+bool finished = false;
 
 
 
@@ -175,16 +176,19 @@ void set_motion(motion_t new_motion_type) {
 /*-----------------------------------------------------------------------------------------------*/
 void check_if_against_a_wall() {
     // handles target when we are at a wall?
-//    if(hit_wall){
-//        // drive towards the map center if coliding with a wall??
-//        if (wallAvoidanceCounter<18) wallAvoidanceCounter += 1;
-//       else wallAvoidanceCounter = 1;
-//    } else {
-//        if (wallAvoidanceCounter > 0){ // flag when the robot hit a wall -> after select new waypoint -> else ignore
-//            random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
-//        }
-//        wallAvoidanceCounter = 0;
-//    }
+    if(hit_wall){
+        // drive towards the map center if coliding with a wall??
+        if (wallAvoidanceCounter<18) wallAvoidanceCounter += 1;
+       else wallAvoidanceCounter = 1;
+    } else {
+        if (wallAvoidanceCounter > 0){ // flag when the robot hit a wall -> after select new waypoint -> else ignore
+            //random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
+            // drive towards the center 
+            Goal_GPS_X = GPS_MAX_CELL_X/2;
+            Goal_GPS_Y = GPS_MAX_CELL_Y/2;
+        }
+        wallAvoidanceCounter = 0;
+    }
 }
 
 
@@ -195,16 +199,13 @@ void GoToGoalLocation() {
     // only recalculate movement if the robot has an update on its orientation aka. moved
     // if hit wall do the hit wall case... also stuck ensures that they drive straight forward for
     // a certain amount of time
-    if (update_orientation){
-       // set_color(RGB(3,0,0));
-       // delay(200);
-       // set_color(RGB(0,0,0));
+    if (update_orientation && !hit_wall && !stuck){
         update_orientation = false;
-
+        
         // calculates the difference thus we can see if we have to turn left or right
-        double angletogoal = atan2(Goal_GPS_Y-Robot_GPS_Y,Goal_GPS_X-Robot_GPS_X)/PI*180-(double)(Robot_orientation);
+        double angletogoal = atan2(Goal_GPS_Y-Robot_GPS_Y,Goal_GPS_X-Robot_GPS_X)/PI*180-Robot_orientation;
         angletogoal = normalize_angle(angletogoal);
-
+        
         // see if we are on track
         bool right_direction = false; // flag set if we move towards the right celestial direction
         if(Robot_GPS_Y == Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){ // right case
@@ -224,37 +225,52 @@ void GoToGoalLocation() {
         }else if (Robot_GPS_Y < Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){  // right upper case
             if(Robot_orientation == 45){ right_direction = true;}
         }else{
-           // tracking_data.byte[3] = 4;
             //printf("[%d] ERROR - something wrong in drive cases \n", kilo_uid);
         }
-
+        
         // if we are not in the right direction -> turn
         if (!right_direction){
             // right from target
             if ((int)angletogoal < 0 ) set_motion(TURN_RIGHT_MY);
             // left from target
             else if ((int)angletogoal > 0) set_motion(TURN_LEFT_MY);
-            if (abs(angletogoal) < 120){
-                turning_ticks = TURNING_TICKS;
-            } else {
-                turning_ticks = MANY_TURNING_TICKS;
-            }
+            turning_ticks= TURNING_TICKS;
             last_motion_ticks = kilo_ticks;
 
         }else{
             set_motion(FORWARD);
         }
+    }else if (hit_wall){
+        // case that we hit a wall: first turn away, than drive straight for a while
+        if (stuck){
+            set_motion(FORWARD);
+        }else if(!(current_motion_type == TURN_LEFT_MY || current_motion_type == TURN_RIGHT_MY)){
+            double aTC =atan2(GPS_MAX_CELL_Y/2-Robot_GPS_Y,GPS_MAX_CELL_X/2-Robot_GPS_X)/PI*180-Robot_orientation;
+            aTC = normalize_angle(aTC);
+            if (aTC > 0){
+                set_motion(TURN_LEFT_MY);
+                last_motion_ticks = kilo_ticks;
+                //turning_ticks = (unsigned int) (fabs(aTC)/38.0*32.0);  // /38.0*32.0
+            }else{
+                set_motion(TURN_RIGHT_MY);
+                last_motion_ticks = kilo_ticks;
+                //turning_ticks = (unsigned int) (fabs(aTC)/38.0*32.0);  // /38.0*32.0
+            }
+            turning_ticks = rand() % 75 + 70; // should be max 180 deg turn aka 4.5 sec 2 bis 4 sec drehen?
+            stuck = false;
+        }
     }
+
     // needed at least for the beginning so that the robot starts moving into the right direction
     // but also to update after turning for a while -> move then straight to update orientation
     switch( current_motion_type ) {
         case TURN_LEFT_MY:
         case TURN_RIGHT_MY:
             if( kilo_ticks > last_motion_ticks + turning_ticks) {
-                // start moving forward
+                /* start moving forward */
                 last_motion_ticks = kilo_ticks;  // fixed time FORWARD
                 if (hit_wall){  // only enforce straight movement when trying to escape a wall
-                    straight_ticks = rand() % MAX_STRAIGHT_TICKS + 75;
+                    straight_ticks = rand() % MAX_STRAIGHT_TICKS + 150;
                     stuck = true;
                 }
                 set_motion(FORWARD);
@@ -266,6 +282,7 @@ void GoToGoalLocation() {
                 stuck = false;
             }
             break;
+
         case STOP:
         default:
             set_motion(STOP);
@@ -275,15 +292,19 @@ void GoToGoalLocation() {
 void update_robot_state(){
     // update reading of sensor - also check for hit_wall flag - setting it inside callback
     // function could lead to inconsistancy!!
-    if (received_role == 42){  // robot sensed wall -> dont update the received option
-        hit_wall = true;
-    }else{
-        hit_wall = false;
-    }
 
     // update current and last position
     if (kilo_ticks > update_orientation_ticks + UPDATE_ORIENTATION_MAX_TICKS){
         update_orientation_ticks = kilo_ticks;
+        if (received_role == 42){  // robot sensed wall -> dont update the received option
+            hit_wall = true;
+            tracking_data.byte[5] = 1;
+        }else{
+            hit_wall = false;
+            // update goal bc it may get resetted in the escape behavior
+            Goal_GPS_X = 5;
+            Goal_GPS_Y = 19;
+        }
         if ((received_x != Robot_GPS_X || received_y != Robot_GPS_Y) && (received_x!=Robot_GPS_X_last || received_y != Robot_GPS_Y_last)){
             Robot_GPS_X_last = Robot_GPS_X;
             Robot_GPS_X = received_x;
@@ -323,6 +344,7 @@ void setup(){
     // Initialise motion variables
     last_motion_ticks = rand() % MAX_STRAIGHT_TICKS + 1;
 
+    set_color(RGB(3,3,3));
 
     // init robot state
     Robot_GPS_X_last = GPS_MAX_CELL_X/2;
@@ -374,19 +396,31 @@ void tx_message_success() {
 /*-----------------------------------------------------------------------------------------------*/
 void loop() {
     // goal reached
-    if(Robot_GPS_X == Goal_GPS_X && Robot_GPS_Y == Goal_GPS_Y){
+    if(received_y >= 18 || finished){
+        finished = true;
         set_motors(0,0);
+        set_color(RGB(3,3,3));
+        delay(100);
+        set_color(RGB(0,0,0));
+        delay(100);
     }else{
         // main loop
         if(received_msg_kilogrid){
             update_robot_state();
+            check_if_against_a_wall();
 
             //set_color(RGB(3,0,0));
         }
 
         // move towards random location
         GoToGoalLocation();
-
+        /*
+        if(hit_wall){
+            set_color(RGB(0,3,0));
+        }else{
+            set_color(RGB(3,3,3));
+        }
+        
         switch(current_motion_type){
             case FORWARD:
                 set_color(RGB(0,3,0));
@@ -402,7 +436,7 @@ void loop() {
                 set_color(RGB(3,3,3));
 
         }
-
+*/
         //set_color(RGB(3,3,3));
     }
     tracking_data.byte[1] = received_x;
