@@ -1,12 +1,17 @@
 from datetime import datetime
 import numpy as np
+import imageio
+import matplotlib.pyplot as plt
+#import visvis as vv
+import cv2 as cv
 
 # Parameters to choose
-conf_file_name = 'christmas_config_new'
+conf_file_name = 'konf_christmas_stuff'
 wall_value = 42
 target_value = 10
 
 configuration_grid = np.zeros((10, 20))
+
 
 def make_walls(grid):
     grid[:, 0:1] = wall_value
@@ -32,9 +37,27 @@ if __name__ == "__main__":
     configuration_grid = make_walls(configuration_grid)
     # setting the target
     #configuration_grid[6:7, 6:7] = target_value
-    configuration_grid = make_tree(configuration_grid)
-    for y in range(20):
-        print(configuration_grid[:, y])
+    #configuration_grid = make_tree(configuration_grid)
+    #for y in range(20):
+    #    print(configuration_grid[:, y])
+
+    #print(configuration_grid_manual.shape)
+    #im = imageio.imread('pixil-frame-0.png')
+    im = cv.imread("pixil-frame-0.png")
+    gray = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
+    gray = gray.transpose()
+    gray[gray == 99] = 3
+    gray[gray == 87] = 1
+    gray[gray == 135] = 2
+    gray[gray == 94] = 4
+    #im = plt.imread('pixil-frame-0.png')
+    print(gray)
+
+    print(gray.shape)
+    #matrix = np.array(im)
+    #print(matrix.shape)
+
+
 
     with open(conf_file_name + '.kconf', 'w') as f:
         # meta data TODO
@@ -55,6 +78,10 @@ if __name__ == "__main__":
                 print(hex(x), file=f)
                 print(hex(y), file=f)
                 print(hex(int(configuration_grid[x, y])), file=f)
+                print(hex(gray[x * 2, y * 2 + 1]), file=f)
+                print(hex(gray[x * 2 + 1, y * 2 + 1]), file=f)
+                print(hex(gray[x * 2, y * 2]), file=f)
+                print(hex(gray[x * 2 + 1, y * 2]), file=f)
 
                 # needed for structure
                 print('', file=f)
