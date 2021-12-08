@@ -2,7 +2,7 @@ from datetime import datetime
 import numpy as np
 
 # Parameters to choose
-conf_file_name = 'christmas_config'
+conf_file_name = 'christmas_config_new'
 wall_value = 42
 target_value = 10
 
@@ -19,8 +19,10 @@ def make_tree(grid):
     begin = [4, 3, 2, 4, 3, 2, 4, 3, 2, 4, 3, 2, 4, 4, 4, 4, 4, 4]
     end =   [6, 7, 8, 6, 7, 8, 6, 7, 8, 6, 7, 8, 6, 6, 6, 6, 6, 6]
     for y in range(16):
-        grid[begin[y]:end[y], 17-y] = np.ones((end[y]-begin[y],)) * 24
-
+        if y < 12:
+            grid[begin[y]:end[y], 17-y] = np.ones((end[y]-begin[y],)) * 24
+        else:
+            grid[begin[y]:end[y], 17 - y] = np.ones((end[y] - begin[y],)) * 25
 
     return grid
 
