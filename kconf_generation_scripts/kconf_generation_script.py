@@ -43,13 +43,14 @@ if __name__ == "__main__":
 
     #print(configuration_grid_manual.shape)
     #im = imageio.imread('pixil-frame-0.png')
-    im = cv.imread("pixil-frame-0.png")
+    im = cv.imread("pixil-frame-0-2.png")
     gray = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
     gray = gray.transpose()
     gray[gray == 99] = 3
     gray[gray == 87] = 1
     gray[gray == 135] = 2
     gray[gray == 94] = 4
+    gray[gray == 224] = 5
     #im = plt.imread('pixil-frame-0.png')
     print(gray)
 
