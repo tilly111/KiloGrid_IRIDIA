@@ -52,7 +52,7 @@ uint8_t Goal_GPS_X = 5;  // x pos of goal
 uint8_t Goal_GPS_Y = 0;  // y pos of goal
 bool update_orientation = false;
 uint32_t update_orientation_ticks = 0;
-const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 64;
+const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 32;
 
 const uint8_t MIN_DIST = 4;  // min distance the new way point has to differ from the last one
 const uint32_t MAX_WAYPOINT_TIME = 3600; // about 2 minutes -> after this time choose new way point
@@ -60,8 +60,8 @@ uint32_t lastWaypointTime;  // time when the last way point was chosen
 
 // stuff for motion
 const bool CALIBRATED = true;  // flag if robot is calibrated??
-const uint8_t TURNING_TICKS = 90; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
-const uint8_t MANY_TURNING_TICKS = 150;
+const uint8_t TURNING_TICKS = 60; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
+const uint8_t MANY_TURNING_TICKS = 130;
 const uint32_t MAX_STRAIGHT_TICKS = 150;
 
 uint32_t turning_ticks = 0;  // TODO chnage back to unsigned int?????
@@ -200,11 +200,11 @@ void GoToGoalLocation() {
        // delay(200);
        // set_color(RGB(0,0,0));
         update_orientation = false;
-        
+
         // calculates the difference thus we can see if we have to turn left or right
         double angletogoal = atan2(Goal_GPS_Y-Robot_GPS_Y,Goal_GPS_X-Robot_GPS_X)/PI*180-(double)(Robot_orientation);
         angletogoal = normalize_angle(angletogoal);
-        
+
         // see if we are on track
         bool right_direction = false; // flag set if we move towards the right celestial direction
         if(Robot_GPS_Y == Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){ // right case
@@ -227,7 +227,7 @@ void GoToGoalLocation() {
            // tracking_data.byte[3] = 4;
             //printf("[%d] ERROR - something wrong in drive cases \n", kilo_uid);
         }
-        
+
         // if we are not in the right direction -> turn
         if (!right_direction){
             // right from target
@@ -280,7 +280,7 @@ void update_robot_state(){
     }else{
         hit_wall = false;
     }
-    
+
     // update current and last position
     if (kilo_ticks > update_orientation_ticks + UPDATE_ORIENTATION_MAX_TICKS){
         update_orientation_ticks = kilo_ticks;
@@ -293,7 +293,7 @@ void update_robot_state(){
            // set_color(RGB(0,0,3));
            // delay(200);
            // set_color(RGB(0,0,0));
-        
+
             // calculate orientation of the robot based on the last and current visited cell -> rough estimate
             double angleOrientation = atan2(Robot_GPS_Y-Robot_GPS_Y_last, Robot_GPS_X-Robot_GPS_X_last)/PI*180;
             angleOrientation = normalize_angle(angleOrientation);
@@ -304,8 +304,8 @@ void update_robot_state(){
         init = false;
         Goal_GPS_X = received_x;
     }
-    
-    
+
+
     received_msg_kilogrid = false;
 }
 
@@ -317,13 +317,13 @@ void setup(){
     tracking_data.byte[0] = kilo_uid;
     // Initialise motors
     set_motors(0,0);
-    
+
     set_motion(FORWARD);
-    
+
     // Initialise motion variables
     last_motion_ticks = rand() % MAX_STRAIGHT_TICKS + 1;
 
-    
+
     // init robot state
     Robot_GPS_X_last = GPS_MAX_CELL_X/2;
     Robot_GPS_Y_last = GPS_MAX_CELL_Y/2;
@@ -331,7 +331,7 @@ void setup(){
     // initialise the GSP to the middle of the environment, to avoid to trigger wall avoidance immediately
     Robot_GPS_X = GPS_MAX_CELL_X/2;
     Robot_GPS_Y = GPS_MAX_CELL_Y/2;
-        
+
     // Intialize time to 0
     kilo_ticks = 0;
 }
@@ -380,13 +380,13 @@ void loop() {
         // main loop
         if(received_msg_kilogrid){
             update_robot_state();
-            
+
             //set_color(RGB(3,0,0));
         }
-        
+
         // move towards random location
         GoToGoalLocation();
-        
+
         switch(current_motion_type){
             case FORWARD:
                 set_color(RGB(0,3,0));
@@ -400,9 +400,9 @@ void loop() {
             case STOP:
             default:
                 set_color(RGB(3,3,3));
-                        
+
         }
-        
+
         //set_color(RGB(3,3,3));
     }
     tracking_data.byte[1] = received_x;
