@@ -60,8 +60,8 @@ uint32_t lastWaypointTime;  // time when the last way point was chosen
 
 // stuff for motion
 const bool CALIBRATED = true;  // flag if robot is calibrated??
-const uint8_t TURNING_TICKS = 130; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
-const uint8_t MANY_TURNING_TICKS = 250;
+const uint8_t TURNING_TICKS = 90; /* constant to allow a maximum rotation of 180 degrees with \omega=\pi/5 */
+const uint8_t MANY_TURNING_TICKS = 150;
 const uint32_t MAX_STRAIGHT_TICKS = 150;
 
 uint32_t turning_ticks = 0;  // TODO chnage back to unsigned int?????
@@ -402,6 +402,8 @@ void loop() {
                 set_color(RGB(3,3,3));
                         
         }
+        
+        //set_color(RGB(3,3,3));
     }
     tracking_data.byte[1] = received_x;
     tracking_data.byte[2] = received_y;
