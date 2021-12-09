@@ -11,7 +11,7 @@
 
 #define PI 3.14159265358979323846
 #define GRID_MSG 1
-#define ROBOT_MSG 2
+#define robot_MSG 2
 
 /*-----------------------------------------------------------------------------------------------*/
 /* Enums section                                                                                 */
@@ -38,7 +38,7 @@ typedef enum {
 
 
 /*-----------------------------------------------------------------------------------------------*/
-/* Robot state                                                                                   */
+/* robot state                                                                                   */
 /*-----------------------------------------------------------------------------------------------*/
 // robot state variables
 uint8_t robot_GPS_X;  // current x position
@@ -97,6 +97,11 @@ bool received_msg_kilogrid = false;
 bool init_flag = true;
 bool init = true;
 bool finished = false;
+
+uint8_t com_range = 0;
+uint32_t broadcast_counter = 0;
+
+IR_message_t* msg;
 
 
 
@@ -190,8 +195,8 @@ void check_if_against_a_wall() {
         if (wallAvoidanceCounter > 0){ // flag when the robot hit a wall -> after select new waypoint -> else ignore
             //random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
             // drive towards the center 
-            Goal_GPS_X = GPS_MAX_CELL_X/2;
-            Goal_GPS_Y = GPS_MAX_CELL_Y/2;
+            goal_GPS_X = GPS_MAX_CELL_X/2;
+            goal_GPS_Y = GPS_MAX_CELL_Y/2;
         }
         wallAvoidanceCounter = 0;
     }
@@ -199,9 +204,9 @@ void check_if_against_a_wall() {
 
 
 /*-----------------------------------------------------------------------------------------------*/
-/* Function to go to the Goal location, called every cycle,                                      */
+/* Function to go to the goal location, called every cycle,                                      */
 /*-----------------------------------------------------------------------------------------------*/
-void GoToGoalLocation() {
+void GoTogoalLocation() {
     // only recalculate movement if the robot has an update on its orientation aka. moved
     // if hit wall do the hit wall case... also stuck ensures that they drive straight forward for
     // a certain amount of time
@@ -209,27 +214,27 @@ void GoToGoalLocation() {
         update_orientation = false;
         
         // calculates the difference thus we can see if we have to turn left or right
-        double angletogoal = atan2(Goal_GPS_Y-Robot_GPS_Y,Goal_GPS_X-Robot_GPS_X)/PI*180-Robot_orientation;
+        double angletogoal = atan2(goal_GPS_Y-robot_GPS_Y, goal_GPS_X-robot_GPS_X)/PI*180-robot_orientation;
         angletogoal = normalize_angle(angletogoal);
         
         // see if we are on track
         bool right_direction = false; // flag set if we move towards the right celestial direction
-        if(Robot_GPS_Y == Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){ // right case
-            if(Robot_orientation == 0){ right_direction = true;}
-        }else if (Robot_GPS_Y > Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){  // bottom right case
-            if(Robot_orientation == -45){ right_direction = true;}
-        }else if (Robot_GPS_Y > Goal_GPS_Y && Robot_GPS_X == Goal_GPS_X){  // bottom case
-            if(Robot_orientation == -90){ right_direction = true;}
-        }else if (Robot_GPS_Y > Goal_GPS_Y && Robot_GPS_X > Goal_GPS_X){  // bottom left case
-            if(Robot_orientation == -135){ right_direction = true;}
-        }else if (Robot_GPS_Y == Goal_GPS_Y && Robot_GPS_X > Goal_GPS_X){  // left case
-            if(Robot_orientation == -180 || Robot_orientation == 180){ right_direction = true;}
-        }else if (Robot_GPS_Y < Goal_GPS_Y && Robot_GPS_X > Goal_GPS_X){  // left upper case
-            if(Robot_orientation == 135){ right_direction = true;}
-        }else if (Robot_GPS_Y < Goal_GPS_Y && Robot_GPS_X == Goal_GPS_X){  // upper case
-            if(Robot_orientation == 90){ right_direction = true;}
-        }else if (Robot_GPS_Y < Goal_GPS_Y && Robot_GPS_X < Goal_GPS_X){  // right upper case
-            if(Robot_orientation == 45){ right_direction = true;}
+        if(robot_GPS_Y == goal_GPS_Y && robot_GPS_X < goal_GPS_X){ // right case
+            if(robot_orientation == 0){ right_direction = true;}
+        }else if (robot_GPS_Y > goal_GPS_Y && robot_GPS_X < goal_GPS_X){  // bottom right case
+            if(robot_orientation == -45){ right_direction = true;}
+        }else if (robot_GPS_Y > goal_GPS_Y && robot_GPS_X == goal_GPS_X){  // bottom case
+            if(robot_orientation == -90){ right_direction = true;}
+        }else if (robot_GPS_Y > goal_GPS_Y && robot_GPS_X > goal_GPS_X){  // bottom left case
+            if(robot_orientation == -135){ right_direction = true;}
+        }else if (robot_GPS_Y == goal_GPS_Y && robot_GPS_X > goal_GPS_X){  // left case
+            if(robot_orientation == -180 || robot_orientation == 180){ right_direction = true;}
+        }else if (robot_GPS_Y < goal_GPS_Y && robot_GPS_X > goal_GPS_X){  // left upper case
+            if(robot_orientation == 135){ right_direction = true;}
+        }else if (robot_GPS_Y < goal_GPS_Y && robot_GPS_X == goal_GPS_X){  // upper case
+            if(robot_orientation == 90){ right_direction = true;}
+        }else if (robot_GPS_Y < goal_GPS_Y && robot_GPS_X < goal_GPS_X){  // right upper case
+            if(robot_orientation == 45){ right_direction = true;}
         }else{
             //printf("[%d] ERROR - something wrong in drive cases \n", kilo_uid);
         }
@@ -251,7 +256,7 @@ void GoToGoalLocation() {
         if (stuck){
             set_motion(FORWARD);
         }else if(!(current_motion_type == TURN_LEFT_MY || current_motion_type == TURN_RIGHT_MY)){
-            double aTC =atan2(GPS_MAX_CELL_Y/2-Robot_GPS_Y,GPS_MAX_CELL_X/2-Robot_GPS_X)/PI*180-Robot_orientation;
+            double aTC =atan2(GPS_MAX_CELL_Y/2-robot_GPS_Y,GPS_MAX_CELL_X/2-robot_GPS_X)/PI*180-robot_orientation;
             aTC = normalize_angle(aTC);
             if (aTC > 0){
                 set_motion(TURN_LEFT_MY);
@@ -308,28 +313,28 @@ void update_robot_state(){
         }else{
             hit_wall = false;
             // update goal bc it may get resetted in the escape behavior
-            Goal_GPS_X = 5;
-            Goal_GPS_Y = 19;
+            goal_GPS_X = 5;
+            goal_GPS_Y = 19;
         }
-        if ((received_x != Robot_GPS_X || received_y != Robot_GPS_Y) && (received_x!=Robot_GPS_X_last || received_y != Robot_GPS_Y_last)){
-            Robot_GPS_X_last = Robot_GPS_X;
-            Robot_GPS_X = received_x;
-            Robot_GPS_Y_last = Robot_GPS_Y;
-            Robot_GPS_Y = received_y;
+        if ((received_x != robot_GPS_X || received_y != robot_GPS_Y) && (received_x!=robot_GPS_X_last || received_y != robot_GPS_Y_last)){
+            robot_GPS_X_last = robot_GPS_X;
+            robot_GPS_X = received_x;
+            robot_GPS_Y_last = robot_GPS_Y;
+            robot_GPS_Y = received_y;
             update_orientation = true;
            // set_color(RGB(0,0,3));
            // delay(200);
            // set_color(RGB(0,0,0));
 
             // calculate orientation of the robot based on the last and current visited cell -> rough estimate
-            double angleOrientation = atan2(Robot_GPS_Y-Robot_GPS_Y_last, Robot_GPS_X-Robot_GPS_X_last)/PI*180;
+            double angleOrientation = atan2(robot_GPS_Y-robot_GPS_Y_last, robot_GPS_X-robot_GPS_X_last)/PI*180;
             angleOrientation = normalize_angle(angleOrientation);
-            Robot_orientation = (uint32_t) angleOrientation;
+            robot_orientation = (uint32_t) angleOrientation;
         }
     }
     if(init){
         init = false;
-        Goal_GPS_X = received_x;
+        goal_GPS_X = received_x;
     }
 
 
@@ -353,12 +358,12 @@ void setup(){
     set_color(RGB(3,3,3));
 
     // init robot state
-    Robot_GPS_X_last = GPS_MAX_CELL_X/2;
-    Robot_GPS_Y_last = GPS_MAX_CELL_Y/2;
-    Robot_orientation = 0;
+    robot_GPS_X_last = GPS_MAX_CELL_X/2;
+    robot_GPS_Y_last = GPS_MAX_CELL_Y/2;
+    robot_orientation = 0;
     // initialise the GSP to the middle of the environment, to avoid to trigger wall avoidance immediately
-    Robot_GPS_X = GPS_MAX_CELL_X/2;
-    Robot_GPS_Y = GPS_MAX_CELL_Y/2;
+    robot_GPS_X = GPS_MAX_CELL_X/2;
+    robot_GPS_Y = GPS_MAX_CELL_Y/2;
 
     // Intialize time to 0
     kilo_ticks = 0;
@@ -368,8 +373,7 @@ void setup(){
 /*-------------------------------------------------------------------*/
 /* Callback function for message reception                           */
 /*-------------------------------------------------------------------*/
-void message_rx( IR_message_t *msg, distance_measurement_t *d ) {
-    if 
+void message_rx( IR_message_t *msg, distance_measurement_t *d ) { 
     if (msg->type == 1){
         received_x = msg->data[0];
         received_y = msg->data[1];
@@ -402,44 +406,6 @@ void tx_message_success() {
 /* Main loop                                                                                     */
 /*-----------------------------------------------------------------------------------------------*/
 void loop() {
-     if (init_flag){  // initialize robot state + other stuff
-        if (init_write){  // received the msg
-            NUMBER_OF_OPTIONS = received_number_of_options;
-            op_to_sample = rand() % NUMBER_OF_OPTIONS + 1;
-            my_commitment = received_commitment;
-            my_commitment_quality = (float)(received_quality/255.0); //+ generateGaussianNoise(0, sample_counter_std_dev);
-            current_ground = received_option;
-            // reset init flags
-            init_write = false;
-            init_flag = false;
-            
-            random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
-            set_motion( FORWARD );
-        }
-    }else{  // normal control loop case
-    /*
-    // goal reached
-    if(received_y >= 18 || finished){
-        finished = true;
-        set_motors(0,0);
-        set_color(RGB(3,3,3));
-        delay(100);
-        set_color(RGB(0,0,0));
-        delay(100);
-    }else{
-        // main loop
-        if(received_msg_kilogrid){
-            update_robot_state();
-            check_if_against_a_wall();
-
-            //set_color(RGB(3,0,0));
-        }
-
-        // move towards random location
-        GoToGoalLocation();
-        
-    }
-    */
     switch(received_option){
         case 0:
             set_color(RGB(3,3,3));
@@ -457,6 +423,25 @@ void loop() {
             set_color(RGB(0,0,0));
             break;
     }
+
+    com_range += 1;
+    broadcast_counter += 1;
+    if((msg = kilob_message_send()) != NULL && broadcast_counter > 10) {
+        msg->type = 62;
+        msg->data[0] = received_option;
+        msg->data[1] = com_range;
+        msg->data[2] = received_x;
+        msg->data[3] = received_y;
+        delay(100);
+        set_color(RGB(3,0,3));
+        delay(100);
+
+        broadcast_counter = 0;
+        if(com_range > 10){
+            com_range = 0;
+        }
+    }
+
 
     tracking_data.byte[1] = received_x;
     tracking_data.byte[2] = received_y;
