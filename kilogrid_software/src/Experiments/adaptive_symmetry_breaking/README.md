@@ -22,5 +22,13 @@ cell colour - cell 4
 There are different message types.
 - 1 - cell sending its coordinates, role and option
 
+```
+x position of the cell
+y position of the cell
+role of the cell (wall=42 or normal cell=0)
+option (1,2,3 or 0 if wall)
+```
+
+- 2 - 
 
 

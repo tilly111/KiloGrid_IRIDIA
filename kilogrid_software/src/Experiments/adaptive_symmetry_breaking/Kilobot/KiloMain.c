@@ -11,6 +11,7 @@
 
 #define PI 3.14159265358979323846
 #define GRID_MSG 1
+#define ROBOT_MSG 2
 
 /*-----------------------------------------------------------------------------------------------*/
 /* Enums section                                                                                 */
@@ -40,23 +41,23 @@ typedef enum {
 /* Robot state                                                                                   */
 /*-----------------------------------------------------------------------------------------------*/
 // robot state variables
-uint8_t Robot_GPS_X;  // current x position
-uint8_t Robot_GPS_Y;  // current y position
-uint32_t Robot_orientation;  // current orientation
-uint8_t Robot_GPS_X_last;  // last x position  -> needed for calculating the orientation
-uint8_t Robot_GPS_Y_last;  // last y position  -> needed for calculating the orientation
+uint8_t robot_GPS_X;  // current x position
+uint8_t robot_GPS_Y;  // current y position
+uint32_t robot_orientation;  // current orientation
+uint8_t robot_GPS_X_last;  // last x position  -> needed for calculating the orientation
+uint8_t robot_GPS_Y_last;  // last y position  -> needed for calculating the orientation
 motion_t current_motion_type = STOP;  // current type of motion
 
 // robot goal variables
-uint8_t Goal_GPS_X = 5;  // x pos of goal
-uint8_t Goal_GPS_Y = 18;  // y pos of goal
+uint8_t goal_GPS_X = 0;  // x pos of goal
+uint8_t goal_GPS_Y = 0;  // y pos of goal
 bool update_orientation = false;
 uint32_t update_orientation_ticks = 0;
 const uint32_t UPDATE_ORIENTATION_MAX_TICKS = 32;
 
 const uint8_t MIN_DIST = 4;  // min distance the new way point has to differ from the last one
 const uint32_t MAX_WAYPOINT_TIME = 3600; // about 2 minutes -> after this time choose new way point
-uint32_t lastWaypointTime;  // time when the last way point was chosen
+uint32_t last_Waypoint_Time;  // time when the last way point was chosen
 
 // stuff for motion
 const bool CALIBRATED = true;  // flag if robot is calibrated??
@@ -79,16 +80,21 @@ tracking_user_data_t tracking_data;
 /*-----------------------------------------------------------------------------------------------*/
 /* Arena variables                                                                               */
 /*-----------------------------------------------------------------------------------------------*/
-const uint8_t GPS_MAX_CELL_X = 10;
-const uint8_t GPS_MAX_CELL_Y = 20;
+const uint8_t GPS_MAX_CELL_X = 20;
+const uint8_t GPS_MAX_CELL_Y = 40;
 
-// communication
+
+/*-----------------------------------------------------------------------------------------------*/
+/* Communication variables for robot - kilogrid                                                  */
+/*-----------------------------------------------------------------------------------------------*/
 uint8_t received_x = 0;
 uint8_t received_y = 0;
 uint8_t received_role = 0;
+uint8_t received_option = 0;
 bool received_msg_kilogrid = false;
 
 // dirty hack
+bool init_flag = true;
 bool init = true;
 bool finished = false;
 
@@ -339,7 +345,7 @@ void setup(){
     // Initialise motors
     set_motors(0,0);
 
-    set_motion(FORWARD);
+    //set_motion(FORWARD);
 
     // Initialise motion variables
     last_motion_ticks = rand() % MAX_STRAIGHT_TICKS + 1;
@@ -363,10 +369,12 @@ void setup(){
 /* Callback function for message reception                           */
 /*-------------------------------------------------------------------*/
 void message_rx( IR_message_t *msg, distance_measurement_t *d ) {
+    if 
     if (msg->type == 1){
         received_x = msg->data[0];
         received_y = msg->data[1];
         received_role = msg->data[2];
+        received_option = msg->data[3];
         received_msg_kilogrid = true;
         //set_color(RGB(3,0,0));
         //delay(200);
@@ -376,8 +384,7 @@ void message_rx( IR_message_t *msg, distance_measurement_t *d ) {
 }
 
 /*-----------------------------------------------------------------------------------------------*/
-/* Callback function for message transmission - this methods do not need to be implemented for   */
-/* the simulation bc inter robot communication is handled by the kilogrid                        */
+/* Callback function for message transmission                                                    */
 /*-----------------------------------------------------------------------------------------------*/
 IR_message_t *message_tx() {
     return NULL;
@@ -395,6 +402,22 @@ void tx_message_success() {
 /* Main loop                                                                                     */
 /*-----------------------------------------------------------------------------------------------*/
 void loop() {
+     if (init_flag){  // initialize robot state + other stuff
+        if (init_write){  // received the msg
+            NUMBER_OF_OPTIONS = received_number_of_options;
+            op_to_sample = rand() % NUMBER_OF_OPTIONS + 1;
+            my_commitment = received_commitment;
+            my_commitment_quality = (float)(received_quality/255.0); //+ generateGaussianNoise(0, sample_counter_std_dev);
+            current_ground = received_option;
+            // reset init flags
+            init_write = false;
+            init_flag = false;
+            
+            random_walk_waypoint_model(SELECT_NEW_WAY_POINT);
+            set_motion( FORWARD );
+        }
+    }else{  // normal control loop case
+    /*
     // goal reached
     if(received_y >= 18 || finished){
         finished = true;
@@ -414,35 +437,31 @@ void loop() {
 
         // move towards random location
         GoToGoalLocation();
-        /*
-        if(hit_wall){
-            set_color(RGB(0,3,0));
-        }else{
-            set_color(RGB(3,3,3));
-        }
         
-        switch(current_motion_type){
-            case FORWARD:
-                set_color(RGB(0,3,0));
-                break;
-            case TURN_RIGHT_MY:
-                set_color(RGB(3,0,0));
-                break;
-            case TURN_LEFT_MY:
-                set_color(RGB(0,0,3));
-                break;
-            case STOP:
-            default:
-                set_color(RGB(3,3,3));
-
-        }
-*/
-        //set_color(RGB(3,3,3));
     }
+    */
+    switch(received_option){
+        case 0:
+            set_color(RGB(3,3,3));
+            break;
+        case 1:
+            set_color(RGB(3,0,0));
+            break;
+        case 2:
+            set_color(RGB(0,3,0));
+            break;
+        case 3:
+            set_color(RGB(0,0,3));
+            break;
+        default:
+            set_color(RGB(0,0,0));
+            break;
+    }
+
     tracking_data.byte[1] = received_x;
     tracking_data.byte[2] = received_y;
-    tracking_data.byte[3] = Robot_GPS_X;
-    tracking_data.byte[4] = Robot_GPS_Y;
+    tracking_data.byte[3] = received_role;
+    tracking_data.byte[4] = received_option;
     kilob_tracking(&tracking_data);
 
 }

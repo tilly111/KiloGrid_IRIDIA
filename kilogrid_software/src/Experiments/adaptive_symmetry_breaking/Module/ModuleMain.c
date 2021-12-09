@@ -69,12 +69,15 @@ void loop(){
                 // this is wall
                 set_LED_with_brightness(cell_id[i], WHITE, HIGH);
             case 1:
+                // option 1
                 set_LED_with_brightness(cell_id[i], RED, HIGH);
                 break;
             case 2:
+                // option 2
                 set_LED_with_brightness(cell_id[i], GREEN, HIGH);
                 break;
             case 3:
+                // option 3 
                 set_LED_with_brightness(cell_id[i], BLUE, HIGH);
                 break;
             default:
