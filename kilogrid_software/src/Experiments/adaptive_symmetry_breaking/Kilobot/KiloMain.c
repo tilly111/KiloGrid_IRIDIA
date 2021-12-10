@@ -102,6 +102,10 @@ uint8_t com_range = 0;
 uint32_t broadcast_counter = 0;
 
 IR_message_t* msg;
+IR_message_t message;
+bool broadcast_msg = false;
+
+uint32_t test_counter = 0;
 
 
 
@@ -387,25 +391,28 @@ void message_rx( IR_message_t *msg, distance_measurement_t *d ) {
     return;
 }
 
-/*-----------------------------------------------------------------------------------------------*/
-/* Callback function for message transmission                                                    */
-/*-----------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------*/
+/* Callback function for message transmission                        */
+/*-------------------------------------------------------------------*/
 IR_message_t *message_tx() {
-    return NULL;
+    if( broadcast_msg ) {
+        return &message;
+    }
+    return 0;
 }
 
-/*-----------------------------------------------------------------------------------------------*/
-/* Callback function for successful transmission  - this methods do not need to be implemented   */
-/* for the simulation bc inter robot communication is handled by the kilogrid                    */
-/*-----------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------*/
+/* Callback function for successful transmission                     */
+/*-------------------------------------------------------------------*/
 void tx_message_success() {
-    return;
+    broadcast_msg = false;
 }
 
 /*-----------------------------------------------------------------------------------------------*/
 /* Main loop                                                                                     */
 /*-----------------------------------------------------------------------------------------------*/
 void loop() {
+    /*
     switch(received_option){
         case 0:
             set_color(RGB(3,3,3));
@@ -423,31 +430,44 @@ void loop() {
             set_color(RGB(0,0,0));
             break;
     }
+    */
 
-    com_range += 1;
-    broadcast_counter += 1;
-    if((msg = kilob_message_send()) != NULL && broadcast_counter > 10) {
-        msg->type = 62;
-        msg->data[0] = received_option;
-        msg->data[1] = com_range;
-        msg->data[2] = received_x;
-        msg->data[3] = received_y;
-        delay(100);
-        set_color(RGB(3,0,3));
-        delay(100);
+    test_counter = test_counter + 1;
 
-        broadcast_counter = 0;
+    // if((msg = kilob_message_send()) != NULL && test_counter > 1000000){
+    if(test_counter > 1000000){
+        com_range = com_range + 1;  // constant value of 4 seems to work fine 
+        test_counter = 0;
+        // msg->type = 62;
+        // msg->data[0] = received_option;
+        // msg->data[1] = com_range;
+        // msg->data[2] = received_x;
+        // msg->data[3] = received_y;
+        message.type = 62;
+        message.data[0] = received_option;
+        message.data[1] = com_range;
+        message.data[2] = received_x;
+        message.data[3] = received_y;
+        broadcast_msg = true;
+
+        if(com_range % 2 == 0){
+            set_color(RGB(3,0,0));
+        }else{
+            set_color(RGB(0,3,0));
+        }
+
         if(com_range > 10){
             com_range = 0;
         }
+    // } else {
+    //     msg = NULL;
     }
 
-
-    tracking_data.byte[1] = received_x;
-    tracking_data.byte[2] = received_y;
-    tracking_data.byte[3] = received_role;
-    tracking_data.byte[4] = received_option;
-    kilob_tracking(&tracking_data);
+    // tracking_data.byte[1] = received_x;
+    // tracking_data.byte[2] = received_y;
+    // tracking_data.byte[3] = received_role;
+    // tracking_data.byte[4] = received_option;
+    // kilob_tracking(&tracking_data);
 
 }
 
