@@ -13,6 +13,8 @@
 #define GRID_MSG 1
 #define robot_MSG 2
 
+#define RESEND_TRIES_KILOGRID 10
+
 /*-----------------------------------------------------------------------------------------------*/
 /* Enums section                                                                                 */
 /*-----------------------------------------------------------------------------------------------*/
@@ -102,12 +104,13 @@ uint8_t com_range = 0;
 uint32_t broadcast_counter = 0;
 
 IR_message_t* msg;
-IR_message_t message;
+IR_message_t* message;
 bool broadcast_msg = false;
 
 uint32_t test_counter = 0;
-
-
+uint32_t msg_counter = 0; 
+uint32_t msg_number = 0;// used to distinguish msg increased after each msg - so we can send multiple msg and the receiver can distinguish if already read 
+uint32_t msg_number_current = 0;
 
 /*-----------------------------------------------------------------------------------------------*/
 /* Normalizes angle between -180 < angle < 180.                                                  */
@@ -313,7 +316,6 @@ void update_robot_state(){
         update_orientation_ticks = kilo_ticks;
         if (received_role == 42){  // robot sensed wall -> dont update the received option
             hit_wall = true;
-            tracking_data.byte[5] = 1;
         }else{
             hit_wall = false;
             // update goal bc it may get resetted in the escape behavior
@@ -350,7 +352,9 @@ void update_robot_state(){
 /*-----------------------------------------------------------------------------------------------*/
 void setup(){
     kilob_tracking_init();
+    kilob_messaging_init();
     tracking_data.byte[0] = kilo_uid;
+    tracking_data.byte[5] = 0;
     // Initialise motors
     set_motors(0,0);
 
@@ -394,19 +398,48 @@ void message_rx( IR_message_t *msg, distance_measurement_t *d ) {
 /*-------------------------------------------------------------------*/
 /* Callback function for message transmission                        */
 /*-------------------------------------------------------------------*/
-IR_message_t *message_tx() {
-    if( broadcast_msg ) {
-        return &message;
-    }
-    return 0;
-}
+// IR_message_t *message_tx() {
+//     if( broadcast_msg ) {
+//         set_color(RGB(0,0,3));
+//         tracking_data.byte[5] += 1;
+//         return &message;
+//     }
+//     return NULL;
+// }
 
 /*-------------------------------------------------------------------*/
 /* Callback function for successful transmission                     */
 /*-------------------------------------------------------------------*/
-void tx_message_success() {
-    broadcast_msg = false;
+// void tx_message_success() {
+//     broadcast_msg = false;
+// }
+
+/*-------------------------------------------------------------------*/
+/* Callback function for successful transmission                     */
+/*-------------------------------------------------------------------*/
+void send_to_kilogrid(){
+    // kilob_message_send()  // this function returns a pointer to a msg object which we can fill and then is scheduled .. see kilob/kilob_messaging.c - sends only once i suppose
+    // kilob_message_sent()  // at same location is the msg_transmitted_successful function - is called internaly - so yeah just send it once and everything is handled by the middleware at least with the kilogrid
+        
+    if (msg_number_current != msg_number){
+        msg_number_current = msg_number;
+        msg_counter = 0;
+    }
+
+    if(msg_counter < RESEND_TRIES_KILOGRID){  
+        if((message = kilob_message_send()) != NULL) { // needed to do be done in single if so it does not block the tracking
+                message->type = 62;
+                message->data[0] = received_option;
+                message->data[1] = com_range;
+                message->data[2] = received_x;
+                message->data[3] = received_y;
+                message->data[4] = msg_number_current;
+
+                msg_counter += 1;
+        }
+    }
 }
+
 
 /*-----------------------------------------------------------------------------------------------*/
 /* Main loop                                                                                     */
@@ -435,40 +468,35 @@ void loop() {
     test_counter = test_counter + 1;
 
     // if((msg = kilob_message_send()) != NULL && test_counter > 1000000){
-    if(test_counter > 1000000){
-        com_range = com_range + 1;  // constant value of 4 seems to work fine 
+    if(test_counter > 50000){
+        com_range = 6;//com_range + 1;  // constant value of 4 seems to work fine 
         test_counter = 0;
-        // msg->type = 62;
-        // msg->data[0] = received_option;
-        // msg->data[1] = com_range;
-        // msg->data[2] = received_x;
-        // msg->data[3] = received_y;
-        message.type = 62;
-        message.data[0] = received_option;
-        message.data[1] = com_range;
-        message.data[2] = received_x;
-        message.data[3] = received_y;
-        broadcast_msg = true;
-
-        if(com_range % 2 == 0){
+        
+        // this needs to be done in order to send new message 
+        msg_number = msg_number + 1;
+        
+        if(msg_number % 2 == 0){
             set_color(RGB(3,0,0));
         }else{
             set_color(RGB(0,3,0));
         }
 
         if(com_range > 10){
-            com_range = 0;
+            com_range = 1;
         }
-    // } else {
-    //     msg = NULL;
     }
 
-    // tracking_data.byte[1] = received_x;
-    // tracking_data.byte[2] = received_y;
-    // tracking_data.byte[3] = received_role;
-    // tracking_data.byte[4] = received_option;
-    // kilob_tracking(&tracking_data);
-
+    // this method needs to get called every cycle because we want to send more than once because data transmission is not very secure...
+    // also we make room that this method does not block kilob_tracking!!!!!
+    if (test_counter % 50 < 25){
+        send_to_kilogrid();
+    }else{
+        tracking_data.byte[1] = received_x;
+        tracking_data.byte[2] = received_y;
+        tracking_data.byte[3] = com_range;
+        tracking_data.byte[4] = msg_number_current;
+        kilob_tracking(&tracking_data);    
+    }
 }
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -477,8 +505,9 @@ void loop() {
 int main(){
     kilo_init();  // init hardware of the kilobot
     utils_init();
-    kilo_message_tx = message_tx;  // register callback - pointer to message which should be send - roughly every 0.5 s
-    kilo_message_tx_success = tx_message_success;  // triggered when transmission is successfull
+    //kilo_message_tx = message_tx;  // register callback - pointer to message which should be send - roughly every 0.5 s
+    //kilo_message_tx_success = tx_message_success;  // triggered when transmission is successfull
+
     kilo_message_rx = message_rx;  // callback for received messages
 
     kilo_start(setup, loop);

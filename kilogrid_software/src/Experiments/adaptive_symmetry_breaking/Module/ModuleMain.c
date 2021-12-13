@@ -1,6 +1,9 @@
 // IMPORTANT NOTES:
 // SENDING TO MUCH WILL BLOCK THE CAN AND YOU CANNOT SEND ANY CONTROL MESSAGES ANYMORE!!!!!
 
+// error explanation:
+// left/up border does not send bc its encoded as wall = 0 which is not sending 
+// bottom/right border ???
 
 #include <avr/io.h>
 #include <avr/wdt.h>
@@ -16,8 +19,8 @@
 
 #include "../communication.h"
 
-#define MAX_MESSAGE_REPEAT 1  // defines how often a message is maximum repeated - if in the mean time a other message arrives the timer is resetted 
-#define MAX_RESET_TIMER 100
+// #define MAX_MESSAGE_REPEAT 1  // defines how often a message is maximum repeated - if in the mean time a other message arrives the timer is resetted 
+#define MAX_RESET_TIMER 500
 
 volatile uint8_t cell_x[4] = {0, 0, 0, 0};
 volatile uint8_t cell_y[4] = {0, 0, 0, 0};
@@ -28,7 +31,7 @@ volatile uint8_t cell_received_op[4] = {0, 0, 0, 0};
 
 
 uint8_t send = 0;
-uint8_t receive = 10;
+uint8_t receive_cell = 10;
 uint8_t send_success = 0;
 uint32_t broadcast_timer = 0;
 
@@ -52,6 +55,8 @@ uint8_t com_range_module;
 uint8_t send_success_sum;
 uint8_t my_x_module;
 uint8_t my_y_module;
+uint8_t msg_number_current = 0;
+uint8_t msg_number = 20;
 
 uint8_t send_flag;
 
@@ -64,7 +69,7 @@ uint8_t x_it;
 uint8_t y_it;
 uint8_t cell_it;
 
-uint8_t message_repeat_timer = 0;
+// uint8_t message_repeat_timer = 0;
 uint8_t receive_timer = 0;
 
 uint32_t reset_timer[4] = {0, 0, 0, 0};
@@ -94,20 +99,29 @@ void IR_rx(IR_message_t *m, cell_num_t c, distance_measurement_t *d, uint8_t CRC
         received_com_range = m->data[1];
         received_x = m->data[2];
         received_y = m->data[3];
+        msg_number_current = m->data[4];
 
-        //receive = 1;
-        if(received_y % 2 == 1 && received_x % 2 == 0){
-            receive = 0;   
-        }else if(received_y % 2 == 1 && received_x % 2 == 1){
-            receive = 1;   
-        }else if(received_y % 2 == 0 && received_x % 2 == 0){
-            receive = 2;    
-        }else if(received_y % 2 == 0 && received_x % 2 == 1){
-            receive = 3;    
+        if(msg_number_current != msg_number){
+        	// case new message
+        	msg_number = msg_number_current;
+        }else{
+        	// message already seen -> discard 
+        	return;
         }
 
-        send_success = 0;  // reset to broadcast the message again
-        message_repeat_timer = 0;
+        // reception for individual cells 
+        if(received_y % 2 == 1 && received_x % 2 == 0){
+            receive_cell = 0;   
+        }else if(received_y % 2 == 1 && received_x % 2 == 1){
+            receive_cell = 1;   
+        }else if(received_y % 2 == 0 && received_x % 2 == 0){
+            receive_cell = 2;    
+        }else if(received_y % 2 == 0 && received_x % 2 == 1){
+            receive_cell = 3;    
+        }
+
+        //send_success = 0;  // reset to broadcast the message again
+        // message_repeat_timer = 0;
     }
 }
 
@@ -217,16 +231,16 @@ void loop(){
 	    // thus it is set to 1 if msg transmission was successful and reseted 
 	    // when we receive a new robot msg aka in IR_rx
         
-	    // some parameters we get from the robot 
-	    com_range = received_com_range;
-        option = received_option;
-        my_x = received_x;
-        my_y = received_y;
-        
         // received a msg and send 
-        if (cell_x[i] == my_x && cell_y[i] == my_y && message_repeat_timer < MAX_MESSAGE_REPEAT){
-        	// robot issues to broadcast a msg
-
+        if (receive_cell == i){  // && message_repeat_timer < MAX_MESSAGE_REPEAT
+			// some parameters we get from the robot 
+			// TODO put this in IR_rx -> save for every cell and reset after sending .. thus each cell can send stuff at the same time 
+			// and not only once per module !!!!!
+		    com_range = received_com_range;
+	        option = received_option;
+	        my_x = received_x;
+	        my_y = received_y;
+        	
         	// reset sending_grid 
         	for(i_it = 0; i_it < 10; i_it++){
                 for(k_it = 0; k_it < 20; k_it++){
@@ -267,35 +281,33 @@ void loop(){
             // TODO only loop through close by modules 
             for(x_it = my_x_module - com_range_module; x_it < my_x_module + com_range_module; x_it++){
                 for(y_it = my_y_module - com_range_module; y_it < my_y_module + com_range_module; y_it++){
-                    send_flag = 0;
+                	// check borders - modules
+                	if(x_it >= 0 && x_it < 10 && y_it >= 0 && y_it < 20){
+	                    send_flag = 0;
 
-                    init_CAN_message(&test_message);
+	                    init_CAN_message(&test_message);
 
-                    test_message.id = 55;  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-                    test_message.data[0] = 55; // maybe this is the msg type (must be larger than 25 to dont overwrite something and less than 64 see communication/CAN.h)
-                    for (cell_it = 0; cell_it < 4; cell_it++){
-                        test_message.data[cell_it + 1] = sending_grid[x_it][y_it][cell_it]; // set if broadcast to cell cell_it
-                        //send_flag = 1;
-                        if(sending_grid[x_it][y_it][cell_it] != 0){
-                            send_flag = 1;
-                        }
-                    }
-                    
-                    test_dest.type = ADDR_INDIVIDUAL; // see communication/kilogrid.h for further information
-                    test_dest.x = x_it;  // is the position of a module imo??
-                    test_dest.y = y_it;
+	                    test_message.id = 55;  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+	                    test_message.data[0] = 55; // maybe this is the msg type (must be larger than 25 to dont overwrite something and less than 64 see communication/CAN.h)
+	                    for (cell_it = 0; cell_it < 4; cell_it++){
+	                        test_message.data[cell_it + 1] = sending_grid[x_it][y_it][cell_it]; // set if broadcast to cell cell_it
+	                        //send_flag = 1;
+	                        if(sending_grid[x_it][y_it][cell_it] != 0){
+	                            send_flag = 1;
+	                        }
+	                    }
+	                    
+	                    test_dest.type = ADDR_INDIVIDUAL; // see communication/kilogrid.h for further information
+	                    test_dest.x = x_it;  // is the position of a module imo??
+	                    test_dest.y = y_it;
 
-                    if(send_flag == 1){
-                        send_success_sum = send_success_sum + CAN_message_tx(&test_message, test_dest); // CAN_message_t *message, kilogrid_address_t dest 
-                        _delay_ms(2);  // TODO change back to 10
-                    }
+	                    if(send_flag == 1){
+	                        send_success_sum = send_success_sum + CAN_message_tx(&test_message, test_dest); // CAN_message_t *message, kilogrid_address_t dest 
+	                        _delay_ms(10);  // TODO change back to 10
+	                    }
+	                }
                 }
             } 
-
-            // flag that transmission was successfull
-            //if(send_success_sum > 0){
-            //	send_success = 1;
-            //}  
 
             // apperently the module cannot send itself a msg so we have to set the broad cast manualy
             cell_received_op[0] = option;
@@ -309,9 +321,9 @@ void loop(){
 	        reset_timer[2] = 0;
 	        reset_timer[3] = 0;
 
-	        message_repeat_timer = message_repeat_timer + 1;
-	        //reset_timer = 0;
-            
+	        // reset after sending a msg
+	        receive_cell = 10;
+	        
         }
 	}
 }
