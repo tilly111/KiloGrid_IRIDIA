@@ -791,7 +791,7 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 			case MODULE_RUNNING:
 				if(!has_started){
 					has_started = 1;
-					// first, broadcast RUN message to the Kilobots for a little while (we assume that all robots are in reset mode already)
+					// first, broadcast RUN message to the Kilobots for a little while (we assume that all robots are in reset mode already) TODO needs to be a bit longer imo
 					IR_setup_message.type = RUN;
 					set_all_LEDs(MAGENTA);
 
@@ -824,7 +824,7 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				_delay_ms(1);
 			}
 
-			if(messages_to_send > 0) {
+			if(messages_to_send > 0) { // TODO here we need a for loop if we want to send more than one can message per iteration?
 				messages_to_send -= 1;
 
 				send_next_CAN_message();

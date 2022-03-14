@@ -100,7 +100,7 @@ bool init_flag = true;
 bool init = true;
 bool finished = false;
 
-uint8_t com_range = 0;
+uint8_t com_range = 3;
 uint32_t broadcast_counter = 0;
 
 IR_message_t* msg;
@@ -469,7 +469,7 @@ void loop() {
 
     // if((msg = kilob_message_send()) != NULL && test_counter > 1000000){
     if(test_counter > 50000){
-        com_range = 6;//com_range + 1;  // constant value of 4 seems to work fine 
+        com_range = com_range + 1;//com_range + 1;  // constant value of 4 seems to work fine 
         test_counter = 0;
         
         // this needs to be done in order to send new message 
@@ -482,7 +482,7 @@ void loop() {
         }
 
         if(com_range > 10){
-            com_range = 1;
+            com_range = 2;
         }
     }
 
