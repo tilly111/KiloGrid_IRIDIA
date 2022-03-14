@@ -106,7 +106,7 @@ CAN_message_t CAN_message_rx;			// store received message
 CAN_message_t CAN_message_bootpage;		// CAN message that stores bootpage messages
 
 /** @brief CAN messages buffer that contains the CAN user messages to be sent. */
-RB_create(CAN_message_tx_buffer, CAN_message_t, CAN_MESSAGE_BUFFER_SIZE);
+RB_create(CAN_message_tx_buffer, CAN_buffer_element, CAN_MESSAGE_BUFFER_SIZE);
 
 /**
  * @brief Stores received message until process_CAN_message transfers it into
@@ -268,10 +268,46 @@ IR_message_tx_success_t module_IR_message_tx_success = IR_message_tx_success_dum
  */
 uint8_t send_next_CAN_message(){
 	if(!RB_empty(CAN_message_tx_buffer)){
-		CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		CAN_buffer_element* e = &RB_front(CAN_message_tx_buffer);
+		CAN_message_t* msg_pt = &(e->msg);
+		kilogrid_address_t addr = e->addr;
+		if (addr.type == ADDR_DISPATCHER){
+			poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
+			poll_response_message.data[1] = 1;
+			poll_response_message.header.length = 2;
+
+			CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher); // debug: replace all access to CAN only through buffer handling functions
+			_delay_ms(1);
+		}
+		CAN_message_tx(msg_pt, addr);
+		RB_popfront(CAN_message_tx_buffer);
 		return 1;
 	}
 	return 0;
+}
+
+// 0 = buffer full
+// 1 = msg added to buffer 
+uint8_t add_CAN_message_to_buffer(CAN_message_t* msg, kilogrid_address_t addr){
+	if (RB_full(CAN_message_tx_buffer)){
+		return 0;
+	} 
+	else{
+		RB_pushback(CAN_message_tx_buffer);
+		CAN_buffer_element e; 
+		e.msg = *msg;
+		e.addr = addr;
+		RB_back(CAN_message_tx_buffer) = e;
+		messages_to_send = RB_size(CAN_message_tx_buffer);
+		return 1;
+	}
+}
+
+// 0 = buffer full
+// 1 = msg added to buffer 
+uint8_t add_CAN_message_to_buffer_dispatcher(CAN_message_t* msg){
+	return add_CAN_message_to_buffer(msg, CAN_address_to_dispatcher);
+
 }
 
 void CAN_message_sent(){
@@ -791,7 +827,7 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 			case MODULE_RUNNING:
 				if(!has_started){
 					has_started = 1;
-					// first, broadcast RUN message to the Kilobots for a little while (we assume that all robots are in reset mode already)
+					// first, broadcast RUN message to the Kilobots for a little while (we assume that all robots are in reset mode already) TODO needs to be a bit longer imo
 					IR_setup_message.type = RUN;
 					set_all_LEDs(MAGENTA);
 
@@ -812,29 +848,29 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				break;
 		}
 
-		if(sending_tracking_data) {
-			if(!sent_tracking_header) {
-				sent_tracking_header = 1;
+		// if(sending_tracking_data) {
+			// if(!sent_tracking_header) {
+			// 	sent_tracking_header = 1;
 
-				poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
-				poll_response_message.data[1] = messages_to_send;
-				poll_response_message.header.length = 2;
+			// 	poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
+			// 	poll_response_message.data[1] = messages_to_send;
+			// 	poll_response_message.header.length = 2;
 
-				CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher);
-				_delay_ms(1);
-			}
+			// 	//CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher); // debug: replace all access to CAN only through buffer handling functions
+			// 	//_delay_ms(1);
+			// 	add_CAN_message_to_buffer(&poll_response_message, CAN_address_to_dispatcher);
+			// }
 
-			if(messages_to_send > 0) {
+			if(messages_to_send > 0) { // TODO here we need a for loop if we want to send more than one can message per iteration?
 				messages_to_send -= 1;
 
 				send_next_CAN_message();
-				RB_popfront(CAN_message_tx_buffer);
 			}
-			else {
-				sending_tracking_data = 0;
-				poll_debug_led_toggle = !poll_debug_led_toggle;
-			}
-		}
+			// else {
+			// 	sending_tracking_data = 0;
+			// 	poll_debug_led_toggle = !poll_debug_led_toggle;
+			// }
+		// }
 
 		// reset has_started flag if state is not equal to MODULE_RUNNING
 		if(module_state != MODULE_RUNNING){
@@ -852,6 +888,7 @@ void module_enable_autostart() {
 }
 
 
+// TODO delete that function
 inline CAN_message_t* next_CAN_message() {
 	CAN_message_t* ret = NULL;
 

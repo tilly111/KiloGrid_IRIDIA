@@ -21,6 +21,7 @@
 #define KILOGRID_MODULE_H
 
 #include <mcp2515.h>
+#include <kilogrid.h>
 
 
 // module rev.A contains 4 cells
@@ -49,6 +50,12 @@ typedef enum {
 	CELL_03 = CELL_LOWER_INDEX + 3
 } cell_num_t;
 
+
+typedef struct
+{
+	CAN_message_t msg;
+	kilogrid_address_t addr;
+} CAN_buffer_element;
 
 /**
  * Unique id of the module, used by the entire module lib, and made accessible
@@ -137,6 +144,8 @@ void module_start(void (*setup)(void), void (*loop)(void));
 void module_enable_autostart();
 
 CAN_message_t* next_CAN_message();
+
+uint8_t add_CAN_message_to_buffer(CAN_message_t*, kilogrid_address_t);
 
 #ifdef __cplusplus
 }  // extern "C"
