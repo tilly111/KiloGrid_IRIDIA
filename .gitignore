@@ -57,8 +57,6 @@ dkms.conf
 # folders we should not touch
 kilogrid_software/src/build-kilogui-Desktop_Qt_5_12_5_MinGW_32_bit-Debug/
 kilogrid_software/src/build-kilogui-Desktop_Qt_5_12_5_MinGW_32_bit-Release/
-kilogrid_software/src/communication/
-kilogrid_software/src/dispatcher/
 kilogrid_software/src/KiloGUI/
 
 # do not track experiment data 
