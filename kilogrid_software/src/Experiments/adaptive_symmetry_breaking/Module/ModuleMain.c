@@ -160,40 +160,42 @@ vec2D cell2module(vec2D cell_pos) {
 /* messaging functions                                                                           */
 /*-----------------------------------------------------------------------------------------------*/
 void IR_rx(IR_message_t *m, cell_num_t c, distance_measurement_t *d, uint8_t CRC_error) {
-    if(!CRC_error && m->type == TRACKING){
-        CAN_message_t* msg = next_CAN_message();
-        // TODO: hunting warnings, why does tracking_user_data_t has only 7 bytes
-        //  maybe we need to do a shift here ????
-        tracking_user_data_t usr_data; 
-        usr_data.byte[0] = m->data[0];
-        usr_data.byte[1] = m->data[1];
-        usr_data.byte[2] = m->data[2];
-        usr_data.byte[3] = m->data[3];
-        usr_data.byte[4] = m->data[4];
-        usr_data.byte[5] = m->data[5]; 
-        usr_data.byte[6] = m->data[6];
-        if(msg != NULL) { // if the buffer is not full
-            serialize_tracking_message(msg, c, &usr_data);
-        }
-    }else if(!CRC_error && m->type == 11){  // VIRTUAL_AGENT_MSG
-        // set tmp data 
-        for (uint8_t tmp_it = 0; tmp_it < 8; tmp_it++){
-            tmp_ir_data[c][tmp_it] = m->data[tmp_it];
-        }
-        received_ir = true;
-    }
+    // if(!CRC_error && m->type == TRACKING){
+    //     CAN_message_t* msg = next_CAN_message();
+    //     // TODO: hunting warnings, why does tracking_user_data_t has only 7 bytes
+    //     //  maybe we need to do a shift here ????
+    //     tracking_user_data_t usr_data; 
+    //     usr_data.byte[0] = m->data[0];
+    //     usr_data.byte[1] = m->data[1];
+    //     usr_data.byte[2] = m->data[2];
+    //     usr_data.byte[3] = m->data[3];
+    //     usr_data.byte[4] = m->data[4];
+    //     usr_data.byte[5] = m->data[5]; 
+    //     usr_data.byte[6] = m->data[6];
+    //     if(msg != NULL) { // if the buffer is not full
+    //         serialize_tracking_message(msg, c, &usr_data);
+    //     }
+    // }else if(!CRC_error && m->type == 11){  // VIRTUAL_AGENT_MSG
+    //     // set tmp data 
+    //     for (uint8_t tmp_it = 0; tmp_it < 8; tmp_it++){
+    //         tmp_ir_data[c][tmp_it] = m->data[tmp_it];
+    //     }
+    //     received_ir = true;
+    // }
 }
 
 
+// callback for receiving CAN messages 
 void CAN_rx(CAN_message_t *m) { 
-    if (m->data[0]== 55){  // set msg
+    if (m->data[0] == CAN_MODULE_TO_MODULE){  // read msg
         for(uint8_t tmp_it = 0; tmp_it < 8; tmp_it++){
             tmp_can_data[tmp_it] = m->data[tmp_it];
         }
         received_can = true;
-    }else {
-    	// do some more msg processing not needed for the moment 
     }
+    // else {
+    // 	// here you can process other messages - should never happen 
+    // }
 }
 
 //void CAN_tx_success(){
@@ -201,6 +203,8 @@ void CAN_rx(CAN_message_t *m) {
 //    return;
 //}
 
+
+// called when pressing setup in the kilogui
 void setup(){
     cell_x[0] = (configuration[0] * 2);
     cell_x[1] = (configuration[0] * 2 + 1);
@@ -229,9 +233,9 @@ void setup(){
         }
     }
 
-    for (i_it = 0; i_it < 4; i_it++){
-    	set_LED_with_brightness(cell_id[i_it], WHITE, HIGH);
-    }
+    // for (i_it = 0; i_it < 4; i_it++){
+    // 	set_LED_with_brightness(cell_id[i_it], WHITE, HIGH);
+    // }
 
 }
 
@@ -265,7 +269,8 @@ void loop() {
                 ir_msg_to_send = true;
                 opt_to_send_ir[cell_it] = tmp_can_data[4];
             } else{
-                opt_to_send_ir[cell_it] = 10;
+            	opt_to_send_ir[cell_it] = current_colour[cell_it];  // this should be nothing, only called for cells when receiving a can message, and it is not in range
+            	
             }
         }
     }
@@ -311,15 +316,15 @@ void loop() {
     some_cycle_counter += 1; 
     some_send_counter += 1;
     for (i_it = 0; i_it < 4; i_it++){
-        if (cell_x[i_it] == 12 && cell_y[i_it] == 25){
-            if (some_send_counter % 200 == 0){ // 
+        if (cell_x[i_it] == 5 && cell_y[i_it] == 20){
+            if (some_send_counter % 100 == 0){ //  % 200 == 0
                 current_colour[i_it] = (current_colour[i_it] + 1) % 3;
                 init_CAN_message(&tmp_can_msg);
-                tmp_can_msg.id = 55;  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-                tmp_can_msg.data[0] = 55; // message id
+                tmp_can_msg.id = current_colour[i_it];  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+                tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
                 tmp_can_msg.data[1] = 12; // x sender 
                 tmp_can_msg.data[2] = 25; // y sender 
-                tmp_can_msg.data[3] = 10; // range
+                tmp_can_msg.data[3] = 45; // range
                 tmp_can_msg.data[4] = current_colour[i_it]; // information
                 tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
                 tmp_can_msg.data[6] = 0;
@@ -329,8 +334,7 @@ void loop() {
                 cell_address.type = ADDR_BROADCAST; // see communication/kilogrid.h for further information
                 cell_address.x = 0;  // is the position of a module imo??
                 cell_address.y = 0;
-                CAN_message_tx(&tmp_can_msg, cell_address);
-                _delay_ms(1);
+                CAN_send_broadcast_message(&tmp_can_msg);
                 //add_CAN_message_to_buffer();
 
                 // for all cells in my module
@@ -397,6 +401,26 @@ void loop() {
         //         current_colour[2] = current_colour[i_it];
         //         current_colour[3] = current_colour[i_it];
         //     }
+        // }
+    }
+
+    if(some_cycle_counter % 1 == 0){
+    	// init_ModuleCAN(module_uid_x_coord, module_uid_y_coord);
+    	// for(cell_it = 0; cell_it < 4; cell_it++){  // todo: delete, only for debugging 
+    	// 	current_colour[cell_it] = debug_till();
+	    // }
+	    // tracking cells which receive stuff
+        // CAN_message_t* msg = next_CAN_message();
+        // tracking_user_data_t usr_data; 
+        // usr_data.byte[0] = cell_x[0];
+        // usr_data.byte[1] = cell_y[0];
+        // usr_data.byte[2] = 1;
+        // usr_data.byte[3] = 2;
+        // usr_data.byte[4] = 3;
+        // usr_data.byte[5] = 4; 
+        // usr_data.byte[6] = 5;
+        // if(msg != NULL) { // if the buffer is not full
+        //     serialize_tracking_message(msg, cell_id[0], &usr_data);
         // }
     }
 

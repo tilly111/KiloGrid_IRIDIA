@@ -257,6 +257,13 @@ IR_message_rx_t module_IR_message_rx = IR_message_rx_dummy;
  */
 IR_message_tx_success_t module_IR_message_tx_success = IR_message_tx_success_dummy;
 
+// TODO till, add some buffer for sending regular messages
+CAN_message_t CAN_buffer_message_tx;  // TODO rename!!!
+kilogrid_address_t CAN_buffer_address_tx;
+// flag for signaling that the user wants to send a message 
+uint8_t send_module_to_module_msg_flag; 
+
+
 /**** PRIVATE FUNCTIONS ****/
 
 /**
@@ -272,6 +279,14 @@ uint8_t send_next_CAN_message(){
 		return 1;
 	}
 	return 0;
+}
+
+// this method should allow you to send some can messages as you want 
+void CAN_send_broadcast_message(CAN_message_t* msg){
+	init_CAN_message(&CAN_buffer_message_tx);
+	CAN_buffer_message_tx = *msg;  // check if we copy the content here!
+	//CAN_buffer_address_tx = addr;  // TODO do we copy the content  
+	send_module_to_module_msg_flag = 1;
 }
 
 void CAN_message_sent(){
@@ -607,7 +622,7 @@ void module_init(void){
 
 	RB_init(CAN_message_tx_buffer); // init CAN message tx buffer
 
-	module_CAN_message_tx_success = CAN_message_sent; // register function callback
+	module_CAN_message_tx_success = CAN_message_sent; // register function callback  - TODO is this a problem? calls empty method which should remove the first element of the buffer????
 
 	// Setup Analog Comparator (enable IR reception) and ADC (distance measurements)
 	ACOMP_SETUP();
@@ -616,8 +631,7 @@ void module_init(void){
 	// Setup peripherals
 	init_serial();
 	init_module_LED();
-	init_ModuleCAN(module_uid_x_coord, module_uid_y_coord); // TODO: replaced with following
-	// init_module_CAN(module_uid_x_coord, module_uid_y_coord);
+	init_ModuleCAN(module_uid_x_coord, module_uid_y_coord);
 	init_module_IR();
 
 	brightness_dir = 1; // increasing
@@ -651,6 +665,17 @@ void module_init(void){
 	for(i=0; i<MODULE_CONFIGURATION_BUFFER_SIZE; i++) {
 		configuration[i] = 0;
 	}
+
+	// TODO till, init buffer for sending messages: prepare also an address to broadcast
+	// this is the buffer to where you want to send your messages to; inited with broadcast because i only use broadcast; but can be changed   
+	CAN_buffer_address_tx.type = ADDR_BROADCAST; // see communication/kilogrid.h for further information
+    //CAN_buffer_address_tx.x = 0;
+    //CAN_buffer_address_tx.y = 0;
+    // init message buffer 
+    //CAN_buffer_message_tx* = NULL;
+    init_CAN_message(&CAN_buffer_message_tx); 
+    // init flag to 0, as we do not want to send 
+    send_module_to_module_msg_flag = 0;
 
 	cprints("Module initialized.");
 
@@ -795,7 +820,7 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 					IR_setup_message.type = RUN;
 					set_all_LEDs(MAGENTA);
 
-					for(i = 0; i < 10; i++){
+					for(i = 0; i < 10; i++){  // is this a good way to implement it ?
 						send_IR_message(&IR_setup_message, CELL_00);
 						send_IR_message(&IR_setup_message, CELL_01);
 						send_IR_message(&IR_setup_message, CELL_02);
@@ -812,7 +837,9 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				break;
 		}
 
-		if(sending_tracking_data) {
+		// BLOCK FOR SENDING CAN MESSAGES 
+		//if(sending_tracking_data) {
+		if(0) {
 			if(!sent_tracking_header) {
 				sent_tracking_header = 1;
 
@@ -833,6 +860,13 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 			else {
 				sending_tracking_data = 0;
 				poll_debug_led_toggle = !poll_debug_led_toggle;
+			}
+		}
+		else {  // if there is no tracking data to be send, send my stuff, dirty hack i know 
+			if (send_module_to_module_msg_flag){
+				send_module_to_module_msg_flag = 0;
+				CAN_message_tx(&CAN_buffer_message_tx, CAN_buffer_address_tx);
+				_delay_ms(1);
 			}
 		}
 

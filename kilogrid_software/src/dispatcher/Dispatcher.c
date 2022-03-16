@@ -61,7 +61,7 @@ volatile kilogrid_address_t current_module_address;
 
 volatile uint32_t module_message_send_timer;
 
-volatile uint8_t waiting_for_kilogui = 0;
+volatile uint8_t waiting_for_kilogui = 0;  // TODO till, lock if app sends data or expect data??
 volatile uint8_t tracking_messages_sent = 0;
 
 volatile uint8_t polling_counter = 0;
@@ -144,7 +144,7 @@ void CAN_rx(CAN_message_t *m){
 			module_messages_total = m->data[1] + 1;
 			module_messages_received = 1;
 			break;
-	}
+	}  // TODO till, how do we handle messages which are not tracking do they just get ignored 
 
 	fCAN_debug_rx = !fCAN_debug_rx;
 	if(fCAN_debug_rx){
@@ -154,7 +154,8 @@ void CAN_rx(CAN_message_t *m){
 		PIN_LOW(DEBUG_2);
 	}
 	
-	CAN_message_rx = *m; // copy content of received message into internal message struct
+	CAN_message_rx = *m; // copy content of received message into internal message struct  TODO, till why? -> is this needed somewhere?
+	// further: i think that the dispatcher does not forward any messages, it is just as a normal node
 
 }
 void CAN_tx_success(uint8_t success){
@@ -254,6 +255,7 @@ void CAN_send_bootpage(bootpage_data_bytes_t *bootpage, uint8_t bootpage_number)
 	}
 }
 
+// what does this method do?
 void send_bootpage_req(serial_packet_type_t type, uint8_t bootpage_number) {
 	uint8_t checksum = SERIAL_PACKET_HEADER ^ type ^ bootpage_number;
 	
@@ -310,23 +312,24 @@ int main() {
 				
 				tracking_try_send(0); // no force dump, rely on the trigger
 				
-				if(current_module_address.x == 0 && 
-				   current_module_address.y == 0 &&
-				   polling_counter >= polling_counter_limit) {
-						polling_counter = 0;
+				// TODO till, here we may fuck with the system which leads to unexpected behaviour! -> expects tracking messages gets other type msg
+				if(current_module_address.x == 0 && current_module_address.y == 0 && polling_counter >= polling_counter_limit) {
+					polling_counter = 0;
 					   
 					// send notification to KiloGUI that the dispatcher is available
 					send_bootpage_req(SERIAL_PACKET_DISPATCHER_AVAILABLE, 0xFF);
 					waiting_for_kilogui = 1;
 				}
 
+				// broadcasting - commands sent by the kilogui imo if i understood correctly  
         		while(!RB_empty(CAN_message_tx_buffer)) {
         			kilogrid_addr.type = ADDR_BROADCAST;
-					CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr);
-					RB_popfront(CAN_message_tx_buffer);
+					CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr);  // TODO till, what the hack we broadcasting here 
+					RB_popfront(CAN_message_tx_buffer);  // here we pop front .. maybe is not called ?
 					_delay_ms(1);
 				}
 
+				// iterating through the modules.. requesting tracking data if we do not wait for the kilogui aka if we can forward messages ????
 				if(!waiting_for_kilogui) {
 					if(current_module_address.x == module_max_x) { // row finished
 	        			current_module_address.x = 0;
@@ -344,12 +347,12 @@ int main() {
 
         			module_messages_total = 1;
 					module_messages_received = 0;
-					can_msg.data[0] = CAN_TRACKING_REQ;
+					can_msg.data[0] = CAN_TRACKING_REQ;  // here the can tracking request is triggered 
 					can_msg.header.length = 1;
 					CAN_message_tx(&can_msg, current_module_address);
-					module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);
+					module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);  // TODO till, never used ?
         		}					
-			}
+			}  // module finished sending all messages it has 
 			/*
 			else if(disp_ticks > module_message_send_timer) {
 				module_messages_total = 1;
@@ -359,8 +362,9 @@ int main() {
 				module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);
 			}
 			*/
-        }
-        else if(module_messages_received >= module_messages_total) {
+        } // experiment running 
+        else if(module_messages_received >= module_messages_total) {  
+        	// broadcasting - whatever is in the can msg tx buffer - when the experiment is not running!
         	while(!RB_empty(CAN_message_tx_buffer)) {
         		kilogrid_addr.type = ADDR_BROADCAST;
 				CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr);
@@ -548,7 +552,8 @@ int main() {
 							break;
 
 						case KILOGRID_IDLE:
-							buffered_msg->data[0] = CAN_MODULE_IDLE;
+							// TODO till, here i need explanation -> why do we need 2 msgs? why is > 64 ignored by module? what is the bootloader, which receives the message? 
+							buffered_msg->data[0] = CAN_MODULE_IDLE;  
 							
 							// send second IDLE message for the bootloader
 							// this will be ignored by the module, because type > 64
@@ -559,7 +564,7 @@ int main() {
 							init_CAN_message(buffered_msg);
 							buffered_msg->data[0] = CAN_MODULE_IDLE + 0x9F;
 
-							if(experiment_running) {
+							if(experiment_running) {  // this should never be true, bc it would enter experiment running on the top right ?
 								experiment_running = 0;
 								tracking_try_send(1); // force dump of tracking data
 							}							
@@ -593,7 +598,7 @@ int main() {
 					}
 
 					waiting_for_kilogui = 0;
-				break;
+					break;
 
 				case SERIAL_PACKET_MODULE_BOOTLOAD_START:
     				module_bootpages = serial_packet.data[0];

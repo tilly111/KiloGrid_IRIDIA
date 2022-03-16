@@ -22,7 +22,7 @@
  */
 typedef enum{
     CAN_MODULE_USER = 0x00,
-    CAN_FORWARD_IR_MESSAGE,
+    CAN_FORWARD_IR_MESSAGE,         // TODO, by till, can we use this type for forwarding messages? -> i do not use it because i do not know the side effects 
     CAN_FORWARD_IR_MESSAGE_STOP,
     CAN_KILO_BOOTPAGE,
     CAN_KILO_BOOTPAGE_SIZE,
@@ -42,7 +42,8 @@ typedef enum{
 	CAN_KILOBOT_DATA,
 	CAN_MODULE_DATA,
     CAN_TRACKING_KILOBOT_START,
-	CAN_TRACKING_REQ
+	CAN_TRACKING_REQ,
+    CAN_MODULE_TO_MODULE            // TODO, by till, this msg type is used by my messages - to make sure that my msgs have a unique type - if it works probably rename to CAN_MODULE_TO_MODULE
 } CAN_message_type_t;
 
 /**** CALLBACKS DEFINITIONS ****/
