@@ -324,7 +324,7 @@ void loop() {
                 tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
                 tmp_can_msg.data[1] = 12; // x sender 
                 tmp_can_msg.data[2] = 25; // y sender 
-                tmp_can_msg.data[3] = 45; // range
+                tmp_can_msg.data[3] = 5; // range
                 tmp_can_msg.data[4] = current_colour[i_it]; // information
                 tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
                 tmp_can_msg.data[6] = 0;
@@ -404,24 +404,24 @@ void loop() {
         // }
     }
 
-    if(some_cycle_counter % 1 == 0){
+    if(some_cycle_counter % 100 == 0){
     	// init_ModuleCAN(module_uid_x_coord, module_uid_y_coord);
     	// for(cell_it = 0; cell_it < 4; cell_it++){  // todo: delete, only for debugging 
     	// 	current_colour[cell_it] = debug_till();
 	    // }
-	    // tracking cells which receive stuff
-        // CAN_message_t* msg = next_CAN_message();
-        // tracking_user_data_t usr_data; 
-        // usr_data.byte[0] = cell_x[0];
-        // usr_data.byte[1] = cell_y[0];
-        // usr_data.byte[2] = 1;
-        // usr_data.byte[3] = 2;
-        // usr_data.byte[4] = 3;
-        // usr_data.byte[5] = 4; 
-        // usr_data.byte[6] = 5;
-        // if(msg != NULL) { // if the buffer is not full
-        //     serialize_tracking_message(msg, cell_id[0], &usr_data);
-        // }
+	    // // tracking cells which receive stuff
+     //    CAN_message_t* msg = next_CAN_message();
+     //    tracking_user_data_t usr_data; 
+     //    usr_data.byte[0] = cell_x[0];
+     //    usr_data.byte[1] = cell_y[0];
+     //    usr_data.byte[2] = 1;
+     //    usr_data.byte[3] = 2;
+     //    usr_data.byte[4] = 3;
+     //    usr_data.byte[5] = 4; 
+     //    usr_data.byte[6] = 5;
+     //    if(msg != NULL) { // if the buffer is not full
+     //        serialize_tracking_message(msg, cell_id[0], &usr_data);
+     //    }
     }
 
 

@@ -135,6 +135,7 @@ void module_init(void);
 void module_start(void (*setup)(void), void (*loop)(void));
 void module_enable_autostart();
 void CAN_send_broadcast_message(CAN_message_t*);
+uint8_t debug_till();
 
 CAN_message_t* next_CAN_message();
 

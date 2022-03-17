@@ -261,9 +261,14 @@ IR_message_tx_success_t module_IR_message_tx_success = IR_message_tx_success_dum
 CAN_message_t CAN_buffer_message_tx;  // TODO rename!!!
 kilogrid_address_t CAN_buffer_address_tx;
 // flag for signaling that the user wants to send a message 
-uint8_t send_module_to_module_msg_flag; 
+uint8_t send_module_to_module_msg_flag;
+uint8_t debug_till_var = 2; 
 
 
+
+uint8_t debug_till(){
+	return debug_till_var;
+}
 /**** PRIVATE FUNCTIONS ****/
 
 /**
@@ -275,8 +280,11 @@ uint8_t send_module_to_module_msg_flag;
  */
 uint8_t send_next_CAN_message(){
 	if(!RB_empty(CAN_message_tx_buffer)){
-		CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
-		return 1;
+		debug_till_var = CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		return 1;  // TODO: this is miss leading because it could be the case that no message was send and you still return 1?!?
+		// should be more like 
+		// return CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		// or do i missunderstand something ?
 	}
 	return 0;
 }
@@ -838,8 +846,8 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 		}
 
 		// BLOCK FOR SENDING CAN MESSAGES 
-		//if(sending_tracking_data) {
-		if(0) {
+		if(sending_tracking_data) {  // TODO: show giovanni
+		//if(0) {
 			if(!sent_tracking_header) {
 				sent_tracking_header = 1;
 
