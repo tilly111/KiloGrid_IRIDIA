@@ -176,6 +176,19 @@ First, backing up the running code:
 sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:r:dispatcher.hex:i" -v
 ```
 This should download the current .hex file. 
+This seems to work lol. 
+
+Second, uploading should be then the same as to some module:
+``` 
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:dispatcher.hex:i" -v
+```
+
+Finally, the last important thing is how to compile the code aka create dispatcher.hex 
+``` 
+cd /mnt/c/kilogrid_software/kilogrid_software/src/dispatcher/
+make all
+```
+This seems to work as well.
 
 ## General advice for running experiments 
 
