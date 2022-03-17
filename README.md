@@ -170,7 +170,12 @@ cd /mnt/c/kilogrid_software/kilogrid_software/src/module/build/module_bootloader
 sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:module_bootloader.hex:i" -v
 ```
 
-But this is not tested yet and may not work. 
+### For setting the Dispatcher
+First, backing up the running code:
+```
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:r:dispatcher.hex:i" -v
+```
+This should download the current .hex file. 
 
 ## General advice for running experiments 
 
