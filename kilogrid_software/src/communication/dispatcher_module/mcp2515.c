@@ -164,9 +164,9 @@ uint8_t init_mcp2515(uint8_t speed)
 	// Nominal bitrate: tbit = tSync + tPRSEG + tPS1 + tPS2, and NBR = 1 / tbit [kbps]
 
 	// activate receive interrupts for both receive buffers
-	spi_putc((1<<RX1IE)|(1<<RX0IE));
+	spi_putc((1<<RX1IE)|(1<<RX0IE));  // Till, why do the system knows the correct register address here? should be 2bh -> CANINTE
 	SPI_RELEASE_CAN();
-	
+
 	// test if we could read back the value => is the chip accessible?
 	if (mcp2515_read_register(CNF1) != speed) {
 		return false;
@@ -181,9 +181,11 @@ uint8_t init_mcp2515(uint8_t speed)
 	//mcp2515_write_register(RXB0CTRL, (1<<RXM1)|(1<<RXM0)); // turn off filtering for buffer 0 => receive any message
 	//mcp2515_write_register(RXB1CTRL, (1<<RXM1)|(1<<RXM0)); // turn off filtering for buffer 1 => receive any message
 	
+	// TODO if you look in the documentation of mcp2515 youll find that you should use either 11 or 00 for [RXM1, RXM0] using 01 10 is not recommanded? 
+	//  so what are you doing here? this shouldnt work! see p. 23/27/28
 	mcp2515_write_register(RXB0CTRL, (1<<RXM0)); // receive only standard messages in receive buffer 0
 	mcp2515_write_register(RXB1CTRL, (1<<RXM0)); // receive only standard messages in receive buffer 1
-	
+
 	// reset device to normal mode
 	mcp2515_write_register(CANCTRL, 0);
 	return true;
@@ -216,15 +218,15 @@ uint8_t mcp2515_check_free_buffer(void)
 uint8_t mcp2515_get_message(CAN_message_t *message)
 {
 	// read status
-	uint8_t status = mcp2515_read_status(SPI_RX_STATUS);
+	uint8_t status = mcp2515_read_status(SPI_RX_STATUS);  // read status of rx buffers 
 	uint8_t addr;
 	uint8_t t;
 
-	if ( BIT_IS_SET(status,6) ) {
+	if ( BIT_IS_SET(status,6) ) {  // see manual page 70, Fig. 12-9
 		// message in buffer 0
 		addr = SPI_READ_RX;
 	}
-	else if ( BIT_IS_SET(status,7) ) {
+	else if ( BIT_IS_SET(status,7) ) {  // see manual page 70, Fig. 12-9
 		// message in buffer 1
 		addr = SPI_READ_RX | 0x04;
 	}
@@ -266,14 +268,19 @@ uint8_t mcp2515_get_message(CAN_message_t *message)
 // 	else {
 // 		mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
 // 	}
+	mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
+	mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
+	mcp2515_bit_modify(EFLG, (1<<RX1OVR), 0);
+	mcp2515_bit_modify(EFLG, (1<<RX0OVR), 0);
 	
 	return (status & 0x07) + 1;
 }
 
 // ----------------------------------------------------------------------------
+// only returns 0 if the buffer is full 
 uint8_t mcp2515_send_message(CAN_message_t *message)
 {
-	uint8_t status = mcp2515_read_status(SPI_READ_STATUS);
+	uint8_t status = mcp2515_read_status(SPI_READ_STATUS);  // read status of tx buffers 
 	
 	/* Statusbyte:
 	 * 
@@ -286,13 +293,13 @@ uint8_t mcp2515_send_message(CAN_message_t *message)
 
 	uint8_t address;
 	uint8_t t;
-	if (BIT_IS_CLEAR(status, 2)) {
+	if (BIT_IS_CLEAR(status, 2)) {  // see manual page 70, Fig. 12-8
 		address = 0x00;
 	}
-	else if (BIT_IS_CLEAR(status, 4)) {
+	else if (BIT_IS_CLEAR(status, 4)) {  // see manual page 70, Fig. 12-8
 		address = 0x02;
 	} 
-	else if (BIT_IS_CLEAR(status, 6)) {
+	else if (BIT_IS_CLEAR(status, 6)) {  // see manual page 70, Fig. 12-8
 		address = 0x04;
 	}
 	else {
@@ -329,15 +336,16 @@ uint8_t mcp2515_send_message(CAN_message_t *message)
 	
 	// send message
 	SPI_SELECT_CAN();
-	address = (address == 0) ? 1 : address;
+	address = (address == 0) ? 1 : address;  // TODO till, what happens here -> do we catch error in sending message 
 	spi_putc(SPI_RTS | address);
 	SPI_RELEASE_CAN();
 	
-	return address;
+	return address;  // this is always 1 
 }
 
 void mcp2515_set_mode(CAN_device_mode_t mode){
-	mcp2515_write_register(CANCTRL, (mode & 0b111) << 5); // CAN modes: bits REQOP<2:0> = CANCTRL<7:5>
+	//  | (1<<OSM) for adding one shot mode
+	mcp2515_write_register(CANCTRL, ((mode & 0b111) << 5)); // CAN modes: bits REQOP<2:0> = CANCTRL<7:5>
 }
 
 void mcp2515_set_mask(uint8_t mask_num, uint16_t mask){

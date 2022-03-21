@@ -173,14 +173,14 @@ sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:module_bootloader.hex:i" 
 ### For setting the Dispatcher
 First, backing up the running code:
 ```
-sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:r:dispatcher.hex:i" -v
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:r:Dispatcher.hex:i" -v
 ```
 This should download the current .hex file. 
 This seems to work lol. 
 
 Second, uploading should be then the same as to some module:
 ``` 
-sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:dispatcher.hex:i" -v
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:Dispatcher.hex:i" -v
 ```
 
 Finally, the last important thing is how to compile the code aka create dispatcher.hex 
@@ -189,6 +189,8 @@ cd /mnt/c/kilogrid_software/kilogrid_software/src/dispatcher/
 make all
 ```
 This seems to work as well.
+
+PAY ATTENTION THE FILES ARE CASE SENSITIVE!
 
 ## General advice for running experiments 
 
@@ -223,4 +225,6 @@ https://diode.group.shef.ac.uk/kilobots/index.php/Kilobots
 
 https://kilobotics.com/docs/index.html
 
+Documentation about the MCP2515 (https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf)
+or check on the local machine under c:/Manuals/
 

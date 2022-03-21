@@ -262,7 +262,7 @@ CAN_message_t CAN_buffer_message_tx;  // TODO rename!!!
 kilogrid_address_t CAN_buffer_address_tx;
 // flag for signaling that the user wants to send a message 
 uint8_t send_module_to_module_msg_flag;
-uint8_t debug_till_var = 2; 
+uint8_t debug_till_var = 0; 
 
 
 
@@ -280,13 +280,19 @@ uint8_t debug_till(){
  */
 uint8_t send_next_CAN_message(){
 	if(!RB_empty(CAN_message_tx_buffer)){
-		debug_till_var = CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
-		return 1;  // TODO: this is miss leading because it could be the case that no message was send and you still return 1?!?
+		// TODO: does this work like this!?!
+		//debug_till_var = 0;
+		//if (!debug_till_var){
+		// debug_till_var = CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		return CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		//	_delay_ms(10);  // is this to long
+		//}
+		// TODO: this is miss leading because it could be the case that no message was send and you still return 1?!?
 		// should be more like 
 		// return CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
 		// or do i missunderstand something ?
 	}
-	return 0;
+	return 2;  // error try to send from empty buffer should not occur 
 }
 
 // this method should allow you to send some can messages as you want 
@@ -584,7 +590,6 @@ static inline void process_CAN_message() {
 			sent_tracking_header = 0;
 			messages_to_send = RB_size(CAN_message_tx_buffer);
 			break;
-
 		default:
 			module_CAN_message_rx(&CAN_message_rx); // transfer CAN message to the user. The user can receive all other CAN messages.
 			break;
@@ -676,9 +681,9 @@ void module_init(void){
 
 	// TODO till, init buffer for sending messages: prepare also an address to broadcast
 	// this is the buffer to where you want to send your messages to; inited with broadcast because i only use broadcast; but can be changed   
-	CAN_buffer_address_tx.type = ADDR_BROADCAST; // see communication/kilogrid.h for further information
-    //CAN_buffer_address_tx.x = 0;
-    //CAN_buffer_address_tx.y = 0;
+	CAN_buffer_address_tx.type = ADDR_LOW_PRIO_BROADCAST; // see communication/kilogrid.h for further information
+    CAN_buffer_address_tx.x = 0;
+    CAN_buffer_address_tx.y = 0;
     // init message buffer 
     //CAN_buffer_message_tx* = NULL;
     init_CAN_message(&CAN_buffer_message_tx); 
@@ -859,11 +864,13 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				_delay_ms(1);
 			}
 
-			if(messages_to_send > 0) { // TODO here we need a for loop if we want to send more than one can message per iteration?
+			if(messages_to_send > 0) {
+				// IMO we have to catch if message was transmitted successfully
+				send_next_CAN_message(); 
 				messages_to_send -= 1;
-
-				send_next_CAN_message();
 				RB_popfront(CAN_message_tx_buffer);
+				//debug_till_var = 2;
+				_delay_ms(1);	
 			}
 			else {
 				sending_tracking_data = 0;
@@ -875,6 +882,7 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				send_module_to_module_msg_flag = 0;
 				CAN_message_tx(&CAN_buffer_message_tx, CAN_buffer_address_tx);
 				_delay_ms(1);
+				
 			}
 		}
 
@@ -914,5 +922,23 @@ inline CAN_message_t* next_CAN_message() {
 ISR(INT0_vect) {
 	mcp2515_get_message(&CAN_message_rx_buffer); // retrieve CAN message
 	process_CAN_message();
+	// other flags wich mark an overflow... probably needed to reset 
+	// mcp2515_write_register(CANINTF, (0<<RX1IF)|(0<<RX0IF));
+	// reset certain flags for overflow :D documentation kann ich 
+	// mcp2515_write_register(EFLG, (0<<RX1OVR)|(0<<RX0OVR));
+
+	// flags we need to reset somehow 
+	// mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
+	// mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
+	// mcp2515_bit_modify(EFLG, (1<<RX1OVR), 0);
+	// mcp2515_bit_modify(EFLG, (1<<RX0OVR), 0);
+
 }
+// this service routine should be called if some overflow happens in the mcp2515 - must be cleared by the mcu.. 
+// dont know which interrupt is triggered or if there is an interrupt at all
+// ISR(INT1_vect) {
+// 	debug_till_var = 1; 
+// 	set_all_LEDs_with_brightness(BLUE, HIGH);
+
+// }
 #endif

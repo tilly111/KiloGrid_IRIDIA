@@ -37,7 +37,7 @@
 #define	SPI_WRITE_TX	0x40
 #define	SPI_RTS			0x80
 #define SPI_READ_STATUS	0xA0
-#define	SPI_RX_STATUS	0xB0
+#define	SPI_RX_STATUS	0xB0  // till, is this really the right address - in the documentation it leads to a weird register, which makes no sense to me?
 #define	SPI_BIT_MODIFY	0x05
 
 // address registers of the MCP2515
@@ -195,6 +195,7 @@
 #define REQOP1		6
 #define REQOP0		5
 #define ABAT		4
+#define OSM			3  // added by till
 #define CLKEN		2
 #define CLKPRE1		1
 #define CLKPRE0		0
