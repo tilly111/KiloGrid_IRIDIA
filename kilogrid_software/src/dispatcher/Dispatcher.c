@@ -68,7 +68,7 @@ volatile uint8_t polling_counter = 0;
 
 uint8_t module_max_x = 0;
 uint8_t module_max_y = 0;
-const static uint8_t polling_counter_limit = 5; // after this limit, the dispatcher sends a serial packet to KiloGUI to accept incoming commands (the lesser, the more reactive, but the bigger the overhead brought by sending a serial packet)
+const static uint8_t polling_counter_limit = 10; // after this limit, the dispatcher sends a serial packet to KiloGUI to accept incoming commands (the lesser, the more reactive, but the bigger the overhead brought by sending a serial packet)
 
 /** @brief  */
 const static uint32_t module_message_send_timeout = 10;
@@ -308,16 +308,7 @@ int main() {
 
     while(1) {
 		if(experiment_running) {
-			// commands should be send independently of the tracking!
-			while(!RB_empty(CAN_message_tx_buffer)) {
-    			kilogrid_addr.type = ADDR_BROADCAST;
-				uint8_t send_flag = CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr); 
-				if (send_flag == 1){  // send next command if it succeeds 
-					RB_popfront(CAN_message_tx_buffer);	
-				}
-				
-				_delay_ms(1);
-			}
+        	//module finished sending all messages it has
         	if(module_messages_received >= module_messages_total) {
 				
 				tracking_try_send(0); // no force dump, rely on the trigger
@@ -331,14 +322,13 @@ int main() {
 					waiting_for_kilogui = 1;
 				}
 
-				// // broadcasting - commands sent by the kilogui imo if i understood correctly  
-				// // todo: if tracking is best effort we can move this out of the if right 
-    //     		while(!RB_empty(CAN_message_tx_buffer)) {
-    //     			kilogrid_addr.type = ADDR_BROADCAST;
-				// 	CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr);  // TODO till, what the hack we broadcasting here 
-				// 	RB_popfront(CAN_message_tx_buffer);  // here we pop front
-				// 	_delay_ms(1);
-				// }
+				// broadcasting - commands sent by the kilogui imo if i understood correctly  
+        		while(!RB_empty(CAN_message_tx_buffer)) {
+        			kilogrid_addr.type = ADDR_BROADCAST;
+					CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr);  // TODO till, what the hack we broadcasting here 
+					RB_popfront(CAN_message_tx_buffer);  // here we pop front .. maybe is not called ?
+					_delay_ms(1);
+				}
 
 				// iterating through the modules.. requesting tracking data if we do not wait for the kilogui aka if we can forward messages ????
 				if(!waiting_for_kilogui) {
@@ -364,13 +354,15 @@ int main() {
 					module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);  // TODO till, never used ?
         		}					
 			}  // module finished sending all messages it has 
-			// else if(disp_ticks > module_message_send_timer) {  // this should be an timeout for tracking data ?! -> why is this commented out, also this does not gurantee the data 
-			// 	module_messages_total = 1;
-			// 	module_messages_received = 0;
-			// 	can_msg.data[0] = CAN_TRACKING_REQ;
-			// 	CAN_message_tx(&can_msg, current_module_address);
-			// 	module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);
-			// }
+			/*
+			else if(disp_ticks > module_message_send_timer) {
+				module_messages_total = 1;
+				module_messages_received = 0;
+				can_msg.data[0] = CAN_TRACKING_REQ;
+				CAN_message_tx(&can_msg, current_module_address);
+				module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);
+			}
+			*/
         } // experiment running 
         else if(module_messages_received >= module_messages_total) {  
         	// broadcasting - whatever is in the can msg tx buffer - when the experiment is not running!
@@ -711,6 +703,7 @@ int main() {
 
     return 0;
 }
+
 
 /**
  * @brief Interrupt service routine for incoming serial packets of data.

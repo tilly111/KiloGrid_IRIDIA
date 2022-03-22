@@ -851,8 +851,8 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 		}
 
 		// BLOCK FOR SENDING CAN MESSAGES 
-		if(sending_tracking_data) {  // TODO: show giovanni
-		//if(0) {
+		// if(sending_tracking_data) {  // TODO: show giovanni
+		if(0) {  // out command because we do not want to send any further tracking messages - work around 
 			if(!sent_tracking_header) {
 				sent_tracking_header = 1;
 
@@ -920,25 +920,25 @@ inline CAN_message_t* next_CAN_message() {
  */
 #ifndef CAN_INTERRUPT_DISABLE
 ISR(INT0_vect) {
-	mcp2515_get_message(&CAN_message_rx_buffer); // retrieve CAN message
-	process_CAN_message();
-	// other flags wich mark an overflow... probably needed to reset 
-	// mcp2515_write_register(CANINTF, (0<<RX1IF)|(0<<RX0IF));
-	// reset certain flags for overflow :D documentation kann ich 
-	// mcp2515_write_register(EFLG, (0<<RX1OVR)|(0<<RX0OVR));
+	// TODO: I do not know how the interrupts are handled. There are 2 external interrupts in the atmega328p (INT0_vect, INT1_vect)
+	//  see https://www.arxterra.com/10-atmega328p-interrupts/ 
+	//  In the following is a implementation, which, assuming it is always the same interrupt triggering the same isr, maybe handles 
+	//  if we observe an overflow... but it is not tested nor correct, just a starting point. Also I am not sure if these interrupts are 
+	//  activated 
 
-	// flags we need to reset somehow 
-	// mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
-	// mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
-	// mcp2515_bit_modify(EFLG, (1<<RX1OVR), 0);
-	// mcp2515_bit_modify(EFLG, (1<<RX0OVR), 0);
+	// uint8_t eflg_register = mcp2515_read_register(EFLG);
 
+	// if (BIT_IS_SET(eflg_register,RX0OVR)){ // buffer RXB0 has an overflow 
+	// 	// handle overflow 
+	// 	mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
+	// 	mcp2515_bit_modify(EFLG, (1<<RX0OVR), 0);
+	// }
+	// else if (BIT_IS_SET(eflg_register,RX1OVR)){  // buffer RXB1 has an overflow 
+	// 	mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
+	// 	mcp2515_bit_modify(EFLG, (1<<RX1OVR), 0);
+	// }else{  // just received a new can msg
+		mcp2515_get_message(&CAN_message_rx_buffer); // retrieve CAN message
+		process_CAN_message();
+	// }
 }
-// this service routine should be called if some overflow happens in the mcp2515 - must be cleared by the mcu.. 
-// dont know which interrupt is triggered or if there is an interrupt at all
-// ISR(INT1_vect) {
-// 	debug_till_var = 1; 
-// 	set_all_LEDs_with_brightness(BLUE, HIGH);
-
-// }
 #endif

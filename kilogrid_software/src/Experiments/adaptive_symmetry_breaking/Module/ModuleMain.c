@@ -176,12 +176,13 @@ void IR_rx(IR_message_t *m, cell_num_t c, distance_measurement_t *d, uint8_t CRC
     //         serialize_tracking_message(msg, c, &usr_data);
     //     }
     // }else if(!CRC_error && m->type == 11){  // VIRTUAL_AGENT_MSG
-    //     // set tmp data 
-    //     for (uint8_t tmp_it = 0; tmp_it < 8; tmp_it++){
-    //         tmp_ir_data[c][tmp_it] = m->data[tmp_it];
-    //     }
-    //     received_ir = true;
-    // }
+    if (!CRC_error && m->type == 11){  // VIRTUAL_AGENT_MSG
+        // set tmp data 
+        for (uint8_t tmp_it = 0; tmp_it < 8; tmp_it++){
+            tmp_ir_data[c][tmp_it] = m->data[tmp_it];
+        }
+        received_ir = true;
+    }
 }
 
 
@@ -243,7 +244,6 @@ void setup(){
 void loop() {
     // compute ir msg 
     if (received_ir){
-        can_msg_to_send = false;
         for(cell_it = 0; cell_it < 4; cell_it++){
             // msg structure: robot_commitment, communication range, robot_x, robot_y, msg_number_sent
             if (tmp_ir_data[cell_it][0] != 0){
@@ -252,6 +252,8 @@ void loop() {
                     received_robot_x[cell_it] = tmp_ir_data[cell_it][2];
                     received_robot_y[cell_it] = tmp_ir_data[cell_it][3];
                     ir_msg_to_send = true;
+                    // forward robot msg 
+                    can_msg_to_send = true;
             }
             // clear 
             for(k_it = 0; k_it < 4; k_it++){
@@ -281,36 +283,38 @@ void loop() {
         for (cell_it = 0; cell_it < 4; cell_it++){
             current_colour[cell_it] = opt_to_send_ir[cell_it];
             // TODO: do proper sending of the message, now only colour
+
+
         }
     }
 
     // // set can msg 
-    // if (can_msg_to_send){
-    //     can_msg_to_send = false;
-    //     for(cell_it = 0; cell_it < 4; cell_it++){
-    //         if (received_commitment[cell_it] != 0){
-    //             init_CAN_message(&tmp_can_msg);
-    //             tmp_can_msg.id = 55;  // should be fine
-    //             tmp_can_msg.data[0] = 55; // message id
-    //             tmp_can_msg.data[1] = received_robot_x[cell_it]; // x sender 
-    //             tmp_can_msg.data[2] = received_robot_y[cell_it]; // y sender 
-    //             tmp_can_msg.data[3] = received_com_range[cell_it]; // range
-    //             tmp_can_msg.data[4] = received_commitment[cell_it]; // commitment 
-    //             tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
-    //             tmp_can_msg.data[6] = 0;
-    //             tmp_can_msg.data[7] = 0;
-    //             last_cycle_counter = some_cycle_counter;
+    if (can_msg_to_send){
+        can_msg_to_send = false;
+        for(cell_it = 0; cell_it < 4; cell_it++){
+            if (received_commitment[cell_it] != 0){
+                init_CAN_message(&tmp_can_msg);
+                tmp_can_msg.id = 55;  // should be fine
+                tmp_can_msg.data[0] = 55; // message id
+                tmp_can_msg.data[1] = received_robot_x[cell_it]; // x sender 
+                tmp_can_msg.data[2] = received_robot_y[cell_it]; // y sender 
+                tmp_can_msg.data[3] = received_com_range[cell_it]; // range
+                tmp_can_msg.data[4] = received_commitment[cell_it]; // commitment 
+                tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
+                tmp_can_msg.data[6] = 0;
+                tmp_can_msg.data[7] = 0;
+                last_cycle_counter = some_cycle_counter;
                 
-    //             cell_address.type = ADDR_BROADCAST; // see communication/kilogrid.h for further information
-    //             cell_address.x = 0;  // is the position of a module imo??
-    //             cell_address.y = 0;
-    //             CAN_message_tx(&tmp_can_msg, cell_address); 
-                // TODO: set cells of this module as well!!!!!!!
-    //             // reset 
-    //             received_commitment[cell_it] = 0;
-    //         }
-    //     }
-    // }
+                cell_address.type = ADDR_BROADCAST; // see communication/kilogrid.h for further information
+                cell_address.x = 0;  // is the position of a module imo??
+                cell_address.y = 0;
+                CAN_message_tx(&tmp_can_msg, cell_address); 
+                //TODO: set cells of this module as well!!!!!!!
+                // reset 
+                received_commitment[cell_it] = 0;
+            }
+        }
+    }
 
 
     some_cycle_counter += 1; 
@@ -324,7 +328,7 @@ void loop() {
                 tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
                 tmp_can_msg.data[1] = 5; // x sender 
                 tmp_can_msg.data[2] = 20; // y sender 
-                tmp_can_msg.data[3] = 12 ; // range
+                tmp_can_msg.data[3] = 45 ; // range
                 tmp_can_msg.data[4] = current_colour[i_it]; // information
                 tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
                 tmp_can_msg.data[6] = 0;
@@ -402,32 +406,25 @@ void loop() {
         // }
     }
 
-    // logging loop TODO: make senseful data 
-	for(cell_it = 0; cell_it < 4; cell_it++){  // todo: delete, only for debugging 
-		//if(some_cycle_counter % 100 == 0)
-    		//current_colour[cell_it] = debug_till();
-		if (cell_x[cell_it] == 10 && cell_y[cell_it] == 10){
-			//if(some_cycle_counter % 100 == 0){ //  && cell_x[i_it] == 5 && cell_y[i_it] == 20
-
-		    	// init_ModuleCAN(module_uid_x_coord, module_uid_y_coord);
-			//current_colour[cell_it] = 0;
-		    	
-		    // // tracking cells which receive stuff
-	        CAN_message_t* msg = next_CAN_message();
-	        tracking_user_data_t usr_data; 
-	        usr_data.byte[0] = cell_x[cell_it];
-	        usr_data.byte[1] = cell_y[cell_it];
-	        usr_data.byte[2] = 1;
-	        usr_data.byte[3] = 2;
-	        usr_data.byte[4] = 3;
-	        usr_data.byte[5] = 4; 
-	        usr_data.byte[6] = 5;
-	        if(msg != NULL) { // if the buffer is not full
-	            serialize_tracking_message(msg, cell_id[cell_it], &usr_data);
-		        }
-		    //}
-		}
-    }
+    // logging loop TODO: make senseful data -> this needs to be moved to the ir_rx method maybe 
+	// for(cell_it = 0; cell_it < 4; cell_it++){  // todo: delete, only for debugging 
+	// 	// logging requirement 
+	// 	if (cell_x[cell_it] == 10 && cell_y[cell_it] == 10){
+	// 		// setting logging data 
+	//         CAN_message_t* msg = next_CAN_message();
+	//         tracking_user_data_t usr_data; 
+	//         usr_data.byte[0] = cell_x[cell_it];
+	//         usr_data.byte[1] = cell_y[cell_it];
+	//         usr_data.byte[2] = 1;
+	//         usr_data.byte[3] = 2;
+	//         usr_data.byte[4] = 3;
+	//         usr_data.byte[5] = 4; 
+	//         usr_data.byte[6] = 5;
+	//         if(msg != NULL) { // if the buffer is not full
+	//             serialize_tracking_message(msg, cell_id[cell_it], &usr_data);
+	//         }
+	// 	}
+ //    }
 
 
 
