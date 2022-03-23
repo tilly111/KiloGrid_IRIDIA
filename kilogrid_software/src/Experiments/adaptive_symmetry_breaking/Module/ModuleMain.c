@@ -38,38 +38,11 @@ volatile uint8_t cell_received_op[4] = {0, 0, 0, 0};
 
 uint16_t unique_cell_id[4];
 
-
-// uint8_t send = 0;
-// uint8_t receive_cell = 10;
-// uint8_t send_success = 0;
-// uint32_t broadcast_timer = 0;
-
-// uint8_t received_option = 0;
-// uint8_t received_x = 0;
-// uint8_t received_y = 0;
-
-// uint8_t com_range = 0;
-// uint8_t option = 0;
-// uint8_t my_x = 0;
-// uint8_t my_y = 0;
-
-// grid which stores where to send msgs -> this data structure is to big 
-// uint8_t sending_grid[10][20][4];
-
 // CAN_message_t test_message;  // for structure of a can msg see communication/mcp2515.h
 // kilogrid_address_t dest_cell_address;
 kilogrid_address_t cell_address;
 IR_message_t test_ir_msg;
 CAN_message_t tmp_can_msg;
-
-// uint8_t com_range_module;
-// uint8_t send_success_sum;
-// uint8_t my_x_module;
-// uint8_t my_y_module;
-// uint8_t msg_number_current = 0;
-// uint8_t msg_number = 20;
-
-// uint8_t send_flag;
 
 // iterators .. init here to see if we exceed storage limits!
 uint8_t i_it;
@@ -198,18 +171,12 @@ void setup(){
             tmp_ir_data[k_it][l_it] = 0;
         }
     }
-
+    
+    // set colour    
     for (i_it = 0; i_it < 4; i_it++){
-    	// set the unique module id 
-    	unique_cell_id[i_it] = cell_x[i_it] + (cell_y[i_it]*20) + 30000;  // address room for indicidual cells from 401
-		tmp_can_msg.id = unique_cell_id[i_it];
-		// set colour
-		set_LED_with_brightness(cell_id[i_it], WHITE, HIGH);
+    	set_LED_with_brightness(cell_id[i_it], WHITE, HIGH);
 
     }
-
-
-
 }
 
 
@@ -323,12 +290,11 @@ void loop() {
 		for (i_it = 0; i_it < 4; i_it++){
 		    if (cell_x[i_it] == 5 && cell_y[i_it] == 5){
 		    //if (rand() % 4 == i_it){
-		        if (some_send_counter % (50) == 0){
+		        if (some_send_counter % (100) == 0){
 		        //if (rand() % 100000 < 100){  // should be 3 % 
 		            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
 		            init_CAN_message(&tmp_can_msg);
-		            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
+		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE;
 		            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
 		            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
 		            tmp_can_msg.data[3] = 45 ; // range
@@ -347,159 +313,159 @@ void loop() {
 		            current_colour[3] = current_colour[i_it];
 		        }
 		    }
-			else if (cell_x[i_it] == 13 && cell_y[i_it] == 20){
-			    //if (rand() % 4 == i_it){
-		        if (some_send_counter % (50) == 0){
-		        //if (rand() % 100000 < 100){  // should be 3 % 
-		            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
-		            init_CAN_message(&tmp_can_msg);
-		            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
-		            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
-		            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
-		            tmp_can_msg.data[3] = 45 ; // range
-		            tmp_can_msg.data[4] = current_colour[i_it]; // information
-		            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
-		            tmp_can_msg.data[6] = 0;
-		            tmp_can_msg.data[7] = 0;
-		            last_cycle_counter = some_cycle_counter;
+			// else if (cell_x[i_it] == 13 && cell_y[i_it] == 20){
+			//     //if (rand() % 4 == i_it){
+		 //        if (some_send_counter % (50) == 0){
+		 //        //if (rand() % 100000 < 100){  // should be 3 % 
+		 //            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
+		 //            init_CAN_message(&tmp_can_msg);
+		 //            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+		 //            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
+		 //            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
+		 //            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
+		 //            tmp_can_msg.data[3] = 45 ; // range
+		 //            tmp_can_msg.data[4] = current_colour[i_it]; // information
+		 //            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
+		 //            tmp_can_msg.data[6] = 0;
+		 //            tmp_can_msg.data[7] = 0;
+		 //            last_cycle_counter = some_cycle_counter;
 		            
-		            CAN_send_broadcast_message(&tmp_can_msg);
+		 //            CAN_send_broadcast_message(&tmp_can_msg);
 
-		            // for all cells in my module
-		            current_colour[0] = current_colour[i_it];
-		            current_colour[1] = current_colour[i_it];
-		            current_colour[2] = current_colour[i_it];
-		            current_colour[3] = current_colour[i_it];
-		        }
-		    }
-			else if (cell_x[i_it] == 12 && cell_y[i_it] == 26){
-			    //if (rand() % 4 == i_it){
-		        if (some_send_counter % (50) == 0){
-		        //if (rand() % 100000 < 100){  // should be 3 % 
-		            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
-		            init_CAN_message(&tmp_can_msg);
-		            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
-		            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
-		            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
-		            tmp_can_msg.data[3] = 6 ; // range
-		            tmp_can_msg.data[4] = current_colour[i_it]; // information
-		            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
-		            tmp_can_msg.data[6] = 0;
-		            tmp_can_msg.data[7] = 0;
-		            last_cycle_counter = some_cycle_counter;
+		 //            // for all cells in my module
+		 //            current_colour[0] = current_colour[i_it];
+		 //            current_colour[1] = current_colour[i_it];
+		 //            current_colour[2] = current_colour[i_it];
+		 //            current_colour[3] = current_colour[i_it];
+		 //        }
+		 //    }
+			// else if (cell_x[i_it] == 12 && cell_y[i_it] == 26){
+			//     //if (rand() % 4 == i_it){
+		 //        if (some_send_counter % (50) == 0){
+		 //        //if (rand() % 100000 < 100){  // should be 3 % 
+		 //            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
+		 //            init_CAN_message(&tmp_can_msg);
+		 //            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+		 //            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
+		 //            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
+		 //            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
+		 //            tmp_can_msg.data[3] = 6 ; // range
+		 //            tmp_can_msg.data[4] = current_colour[i_it]; // information
+		 //            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
+		 //            tmp_can_msg.data[6] = 0;
+		 //            tmp_can_msg.data[7] = 0;
+		 //            last_cycle_counter = some_cycle_counter;
 		            
-		            CAN_send_broadcast_message(&tmp_can_msg);
+		 //            CAN_send_broadcast_message(&tmp_can_msg);
 
-		            // for all cells in my module
-		            current_colour[0] = current_colour[i_it];
-		            current_colour[1] = current_colour[i_it];
-		            current_colour[2] = current_colour[i_it];
-		            current_colour[3] = current_colour[i_it];
-		        }
-		    }
-		    else if (cell_x[i_it] == 2 && cell_y[i_it] == 20){
-			    //if (rand() % 4 == i_it){
-		        if (some_send_counter % (50) == 0){
-		        //if (rand() % 100000 < 100){  // should be 3 % 
-		            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
-		            init_CAN_message(&tmp_can_msg);
-		            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
-		            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
-		            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
-		            tmp_can_msg.data[3] = 6 ; // range
-		            tmp_can_msg.data[4] = current_colour[i_it]; // information
-		            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
-		            tmp_can_msg.data[6] = 0;
-		            tmp_can_msg.data[7] = 0;
-		            last_cycle_counter = some_cycle_counter;
+		 //            // for all cells in my module
+		 //            current_colour[0] = current_colour[i_it];
+		 //            current_colour[1] = current_colour[i_it];
+		 //            current_colour[2] = current_colour[i_it];
+		 //            current_colour[3] = current_colour[i_it];
+		 //        }
+		 //    }
+		 //    else if (cell_x[i_it] == 2 && cell_y[i_it] == 20){
+			//     //if (rand() % 4 == i_it){
+		 //        if (some_send_counter % (50) == 0){
+		 //        //if (rand() % 100000 < 100){  // should be 3 % 
+		 //            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
+		 //            init_CAN_message(&tmp_can_msg);
+		 //            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+		 //            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
+		 //            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
+		 //            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
+		 //            tmp_can_msg.data[3] = 6 ; // range
+		 //            tmp_can_msg.data[4] = current_colour[i_it]; // information
+		 //            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
+		 //            tmp_can_msg.data[6] = 0;
+		 //            tmp_can_msg.data[7] = 0;
+		 //            last_cycle_counter = some_cycle_counter;
 		            
-		            CAN_send_broadcast_message(&tmp_can_msg);
+		 //            CAN_send_broadcast_message(&tmp_can_msg);
 
-		            // for all cells in my module
-		            current_colour[0] = current_colour[i_it];
-		            current_colour[1] = current_colour[i_it];
-		            current_colour[2] = current_colour[i_it];
-		            current_colour[3] = current_colour[i_it];
-		        }
-		    }
-		    else if (cell_x[i_it] == 3 && cell_y[i_it] == 35){
-			    //if (rand() % 4 == i_it){
-		        if (some_send_counter % (50) == 0){
-		        //if (rand() % 100000 < 100){  // should be 3 % 
-		            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
-		            init_CAN_message(&tmp_can_msg);
-		            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
-		            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
-		            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
-		            tmp_can_msg.data[3] = 6 ; // range
-		            tmp_can_msg.data[4] = current_colour[i_it]; // information
-		            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
-		            tmp_can_msg.data[6] = 0;
-		            tmp_can_msg.data[7] = 0;
-		            last_cycle_counter = some_cycle_counter;
+		 //            // for all cells in my module
+		 //            current_colour[0] = current_colour[i_it];
+		 //            current_colour[1] = current_colour[i_it];
+		 //            current_colour[2] = current_colour[i_it];
+		 //            current_colour[3] = current_colour[i_it];
+		 //        }
+		 //    }
+		 //    else if (cell_x[i_it] == 3 && cell_y[i_it] == 35){
+			//     //if (rand() % 4 == i_it){
+		 //        if (some_send_counter % (50) == 0){
+		 //        //if (rand() % 100000 < 100){  // should be 3 % 
+		 //            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
+		 //            init_CAN_message(&tmp_can_msg);
+		 //            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+		 //            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
+		 //            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
+		 //            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
+		 //            tmp_can_msg.data[3] = 6 ; // range
+		 //            tmp_can_msg.data[4] = current_colour[i_it]; // information
+		 //            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
+		 //            tmp_can_msg.data[6] = 0;
+		 //            tmp_can_msg.data[7] = 0;
+		 //            last_cycle_counter = some_cycle_counter;
 		            
-		            CAN_send_broadcast_message(&tmp_can_msg);
+		 //            CAN_send_broadcast_message(&tmp_can_msg);
 
-		            // for all cells in my module
-		            current_colour[0] = current_colour[i_it];
-		            current_colour[1] = current_colour[i_it];
-		            current_colour[2] = current_colour[i_it];
-		            current_colour[3] = current_colour[i_it];
-		        }
-		    }
-		    else if (cell_x[i_it] == 16 && cell_y[i_it] == 36){
-			    //if (rand() % 4 == i_it){
-		        if (some_send_counter % (50) == 0){
-		        //if (rand() % 100000 < 100){  // should be 3 % 
-		            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
-		            init_CAN_message(&tmp_can_msg);
-		            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
-		            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
-		            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
-		            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
-		            tmp_can_msg.data[3] = 6 ; // range
-		            tmp_can_msg.data[4] = current_colour[i_it]; // information
-		            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
-		            tmp_can_msg.data[6] = 0;
-		            tmp_can_msg.data[7] = 0;
-		            last_cycle_counter = some_cycle_counter;
+		 //            // for all cells in my module
+		 //            current_colour[0] = current_colour[i_it];
+		 //            current_colour[1] = current_colour[i_it];
+		 //            current_colour[2] = current_colour[i_it];
+		 //            current_colour[3] = current_colour[i_it];
+		 //        }
+		 //    }
+		 //    else if (cell_x[i_it] == 16 && cell_y[i_it] == 36){
+			//     //if (rand() % 4 == i_it){
+		 //        if (some_send_counter % (50) == 0){
+		 //        //if (rand() % 100000 < 100){  // should be 3 % 
+		 //            current_colour[i_it] = (current_colour[i_it] + 1) % 3;
+		 //            init_CAN_message(&tmp_can_msg);
+		 //            tmp_can_msg.id = get_random(30000, 60000);  // dont know if id is important - maybe to check if msg arrived twice or so - max 65,535
+		 //            tmp_can_msg.data[0] = CAN_MODULE_TO_MODULE; // message id - see CAN_message_type_t @ CAN.h and process_CAN_message @ module.c 
+		 //            tmp_can_msg.data[1] = cell_x[i_it]; // x sender 
+		 //            tmp_can_msg.data[2] = cell_y[i_it]; // y sender 
+		 //            tmp_can_msg.data[3] = 6 ; // range
+		 //            tmp_can_msg.data[4] = current_colour[i_it]; // information
+		 //            tmp_can_msg.data[5] = some_cycle_counter - last_cycle_counter; // debug info
+		 //            tmp_can_msg.data[6] = 0;
+		 //            tmp_can_msg.data[7] = 0;
+		 //            last_cycle_counter = some_cycle_counter;
 		            
-		            CAN_send_broadcast_message(&tmp_can_msg);
+		 //            CAN_send_broadcast_message(&tmp_can_msg);
 
-		            // for all cells in my module
-		            current_colour[0] = current_colour[i_it];
-		            current_colour[1] = current_colour[i_it];
-		            current_colour[2] = current_colour[i_it];
-		            current_colour[3] = current_colour[i_it];
-		        }
-		    }
+		 //            // for all cells in my module
+		 //            current_colour[0] = current_colour[i_it];
+		 //            current_colour[1] = current_colour[i_it];
+		 //            current_colour[2] = current_colour[i_it];
+		 //            current_colour[3] = current_colour[i_it];
+		 //        }
+		 //    }
 		}
 
     // logging loop TODO: make senseful data -> this needs to be moved to the ir_rx method maybe 
-	// for(cell_it = 0; cell_it < 4; cell_it++){  // todo: delete, only for debugging 
-	// 	// logging requirement 
-	// 	//if (cell_x[cell_it] == 10 && cell_y[cell_it] == 10){
-	// 	if (some_cycle_counter % 2000 == 0 && !debug_till()){
-	// 		// setting logging data 
-	//         CAN_message_t* msg = next_CAN_message();
-	//         tracking_user_data_t usr_data; 
-	//         usr_data.byte[0] = cell_x[cell_it];
-	//         usr_data.byte[1] = cell_y[cell_it];
-	//         usr_data.byte[2] = 1;
-	//         usr_data.byte[3] = 2;
-	//         usr_data.byte[4] = 3;
-	//         usr_data.byte[5] = 4; 
-	//         usr_data.byte[6] = 5;
-	//         if(msg != NULL) { // if the buffer is not full
-	//             serialize_tracking_message(msg, cell_id[cell_it], &usr_data);
-	//         }
-	// 	//}
- //        }
- //    }
+	for(cell_it = 0; cell_it < 4; cell_it++){  // todo: delete, only for debugging 
+		// logging requirement 
+		//if (cell_x[cell_it] == 10 && cell_y[cell_it] == 10){
+		if (some_cycle_counter % 2000 == 0 && !debug_till()){
+			// setting logging data 
+	        CAN_message_t* msg = next_CAN_message();
+	        tracking_user_data_t usr_data; 
+	        usr_data.byte[0] = cell_x[cell_it];
+	        usr_data.byte[1] = cell_y[cell_it];
+	        usr_data.byte[2] = 1;
+	        usr_data.byte[3] = 2;
+	        usr_data.byte[4] = 3;
+	        usr_data.byte[5] = 4; 
+	        usr_data.byte[6] = 5;
+	        if(msg != NULL) { // if the buffer is not full
+	            serialize_tracking_message(msg, cell_id[cell_it], &usr_data);
+	        }
+		//}
+        }
+    }
 
 
 
@@ -527,10 +493,7 @@ void loop() {
         }
     }
 
-    uint8_t tmp_random_number_i_need = get_random(5, 10);
-    for (uint8_t random_counter = 0; random_counter < tmp_random_number_i_need; random_counter++){
-    	_delay_ms(1);	
-    }
+    _delay_ms(10);
 }
 
 

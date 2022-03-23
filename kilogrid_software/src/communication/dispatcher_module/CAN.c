@@ -33,13 +33,6 @@ CAN_message_t CAN_rx_message;
  * @param dest_type
  */
 uint16_t get_CAN_ID_from_Kilogrid_address(kilogrid_address_t coord, destination_type_t dest_type){
-	// TODO hack by till in order to implement low prio broadcast 
-	if (coord.type == ADDR_LOW_PRIO_BROADCAST){
-		// 11111111 111 = 2047
-		return 2047;
-		// return 0b11111111111;
-	}
-
 	uint16_t ID_LSB = 0;
 	uint16_t ID_MSB = 0;
 	uint16_t CAN_ID = 0;
@@ -69,7 +62,10 @@ uint16_t get_CAN_ID_from_Kilogrid_address(kilogrid_address_t coord, destination_
 			ID_LSB = coord.x + 1;
 			ID_MSB = 0; // y ignored, broadcast to all rows for column x
 			break;
-
+		case ADDR_BROADCAST_TO_MODULE:  
+			ID_LSB = (coord.x + 1) | 0b10000; // the x-coord of the module broadcast address needs to be larger than 15 thus ID_LSB = 1xxxx   
+			ID_MSB = coord.y + 1;
+			break;
 		// Individual addressing and messages to the dispatcher are processed in the same way. When a modules wants to send a message to the dispatcher, it appends its x and y coordinates to the message to be sent. Only the dest_type differs (appended at the LSB of the CAN_ID)
 		case ADDR_INDIVIDUAL:
 		case ADDR_DISPATCHER:
@@ -124,25 +120,31 @@ void init_ModuleCAN(uint8_t x_coord, uint8_t y_coord){
 		module_address.x = x_coord;
 		module_address.y = y_coord;
 
-		mcp2515_set_mask(0, 0x7FF);
+		// mask for filters: 0, 1 00000 10000 1
+		mcp2515_set_mask(0, 0b00000100001);
+		
+		// filter 0
+		module_address.type = ADDR_BROADCAST_TO_MODULE;
+		mcp2515_set_filter(0, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE));
+		// filter 1, ATTENTION: ADDR_COLUMN will not work !!!!!!!
+		// module_address.type = ADDR_ROW;
+		mcp2515_set_filter(1, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) );
+		
+		// mask for the filters: 2, 3, 4, 5
 		mcp2515_set_mask(1, 0x7FF); // compare all bits of received message ID to the filter bits (no mask filtering)
 
-		// set filters for every type of addressing ADDR_BROADCAST = 0, ADDR_ROW = 1, ADDR_COLUMN = 2, ADDR_INDIVIDUAL = 3
-  		// for(uint8_t k = ADDR_BROADCAST; k <= ADDR_INDIVIDUAL; k++){
-  		for(uint8_t k = 0; k <= 3; k++){
-			module_address.type = k;
-			mcp2515_set_filter(k, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) ); // receive messages to be sent to the modules, on the basis of the coordinates of current module
-
-		}
-
-		// setting filters 4 and 5 as well to a valid ID (not used, but have to be set properly)
-		//module_address.type = ADDR_BROADCAST;
-		//mcp2515_set_filter(4, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) ); // receive messages to be sent to the modules, on the basis of the coordinates of current modules
-		module_address.type = ADDR_LOW_PRIO_BROADCAST;
-		mcp2515_set_filter(4, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) );
-
+		// filter 2
 		module_address.type = ADDR_BROADCAST;
-		mcp2515_set_filter(5, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) ); // receive messages to be sent to the modules, on the basis of the coordinates of current modules
+		mcp2515_set_filter(2, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) );
+		// filter 3
+		module_address.type = ADDR_INDIVIDUAL;
+		mcp2515_set_filter(3, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) );
+		// filter 4
+		// module_address.type = ADDR_COLUMN;
+		mcp2515_set_filter(4, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) );
+		// filter 5
+		module_address.type = ADDR_DISPATCHER;
+		mcp2515_set_filter(5, get_CAN_ID_from_Kilogrid_address(module_address, TO_MODULE) );
 
 	#elif defined(DISPATCHER)
 
@@ -172,15 +174,12 @@ void init_ModuleCAN(uint8_t x_coord, uint8_t y_coord){
  *  @return Returns 1 if succeeded.
  *
  */
-uint8_t CAN_message_tx(CAN_message_t *message, kilogrid_address_t dest) {
+uint8_t CAN_message_tx(CAN_message_t *message, kilogrid_address_t dest) { // dest: x,y and type 
 	uint8_t msg_success;
 
 	// translate Kilogrid coordinates into CAN ID for current message
 	if(dest.type == ADDR_DISPATCHER){
 		message->id = get_CAN_ID_from_Kilogrid_address(dest, TO_DISPATCHER);
-	}
-	else if (dest.type == ADDR_LOW_PRIO_BROADCAST){
-		message->id = get_CAN_ID_from_Kilogrid_address(dest, TO_MODULE); 
 	}
 	else{
 		message->id = get_CAN_ID_from_Kilogrid_address(dest, TO_MODULE);
@@ -242,8 +241,6 @@ void serialize_tracking_message(CAN_message_t* msg, uint8_t cell_id, tracking_us
 
 	cell_id &= 0b00000011;
 	msg->data[0] = CAN_TRACKING_KILOBOT | (cell_id << 6);
-	// here we also need to address the 
-	//msg->id = ((cell_id+1) * unique_cell_id) + 10000;
 
 	// user data fields
 	for(uint8_t i = 0; i < TRACKING_MSG_USER_DATA; i++){

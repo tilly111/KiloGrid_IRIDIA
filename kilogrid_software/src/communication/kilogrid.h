@@ -23,13 +23,14 @@ typedef struct{
 // See URL https://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/attributes-types.html
 // for reference.
 typedef enum __attribute__ ((__packed__)) {
-	ADDR_BROADCAST = 0x00, ///< broadcast to all modules
-	ADDR_INDIVIDUAL = 0x01, ///< send to an individual module
-	ADDR_COLUMN = 0x02, ///< broadcast to all modules in a column
-	ADDR_ROW = 0x03, ///< broadcast to all modules in a row
-	ADDR_LOW_PRIO_BROADCAST = 0x04,  // low prio broadcast for user (best effort)
+	ADDR_BROADCAST_TO_MODULE = 0x00, ///< broadcast to all modules
+	ADDR_COLUMN = 0x01, ///< send to an individual module
+	ADDR_BROADCAST = 0x02, ///< broadcast to all modules in a column
+	ADDR_INDIVIDUAL = 0x03, ///< broadcast to all modules in a row
+	ADDR_ROW = 0x04,  // low prio broadcast for user
 	ADDR_DISPATCHER = 0xFF ///< send to dispatcher
 } kilogrid_addressing_type_t;
+
 
 typedef struct __attribute__((__packed__)){
 

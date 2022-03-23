@@ -58,7 +58,7 @@ See the init_mcp2515 function for more detail on the configuration of the bitrat
 
 /** Structure of a CAN message */
 typedef struct{
-	uint16_t id;  // MUST BE UNIQUE
+	uint16_t id;  // MUST BE UNIQUE -> this is achieved in get_CAN_ID_from_Kilogrid_address() @ CAN.c
 
 	struct {
 		int8_t rtr : 1;

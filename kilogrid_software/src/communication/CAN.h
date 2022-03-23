@@ -22,7 +22,7 @@
  */
 typedef enum{
     CAN_MODULE_USER = 0x00,
-    CAN_FORWARD_IR_MESSAGE,         // TODO, by till, can we use this type for forwarding messages? -> i do not use it because i do not know the side effects 
+    CAN_FORWARD_IR_MESSAGE,          
     CAN_FORWARD_IR_MESSAGE_STOP,
     CAN_KILO_BOOTPAGE,
     CAN_KILO_BOOTPAGE_SIZE,
