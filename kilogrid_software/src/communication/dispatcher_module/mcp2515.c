@@ -268,10 +268,6 @@ uint8_t mcp2515_get_message(CAN_message_t *message)
 // 	else {
 // 		mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
 // 	}
-	// mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
-	// mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
-	// mcp2515_bit_modify(EFLG, (1<<RX1OVR), 0);
-	// mcp2515_bit_modify(EFLG, (1<<RX0OVR), 0);
 	
 	return (status & 0x07) + 1;
 }

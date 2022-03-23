@@ -186,7 +186,7 @@ uint8_t CAN_message_tx(CAN_message_t *message, kilogrid_address_t dest) {
 		message->id = get_CAN_ID_from_Kilogrid_address(dest, TO_MODULE);
 	}
 
-	mcp2515_bit_modify(CANCTRL, (1<<REQOP2) | (1<<REQOP1) | (1<<REQOP0), 0);  // TODO: disable one shot mode ??!?!?!?!?!
+	mcp2515_bit_modify(CANCTRL, (1<<REQOP2) | (1<<REQOP1) | (1<<REQOP0), 0);  
 	msg_success = mcp2515_send_message(message); // send message and store outcome
 
 	if(msg_success){
@@ -242,6 +242,8 @@ void serialize_tracking_message(CAN_message_t* msg, uint8_t cell_id, tracking_us
 
 	cell_id &= 0b00000011;
 	msg->data[0] = CAN_TRACKING_KILOBOT | (cell_id << 6);
+	// here we also need to address the 
+	//msg->id = ((cell_id+1) * unique_cell_id) + 10000;
 
 	// user data fields
 	for(uint8_t i = 0; i < TRACKING_MSG_USER_DATA; i++){

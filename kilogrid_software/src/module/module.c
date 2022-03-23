@@ -1,4 +1,5 @@
 #include <stdlib.h>         // for rand()
+#include <time.h>
 #include <string.h>         // for memcpy
 #include <avr/wdt.h>        // watch dog timer
 #include <avr/interrupt.h>
@@ -269,6 +270,11 @@ uint8_t debug_till_var = 0;
 uint8_t debug_till(){
 	return debug_till_var;
 }
+
+uint16_t get_random(uint16_t low, uint16_t high){
+	return ((rand() % (high-low)) + low);
+}
+
 /**** PRIVATE FUNCTIONS ****/
 
 /**
@@ -284,6 +290,7 @@ uint8_t send_next_CAN_message(){
 		//debug_till_var = 0;
 		//if (!debug_till_var){
 		// debug_till_var = CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		RB_front(CAN_message_tx_buffer).id = get_random(10000, 20000); 
 		return CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
 		//	_delay_ms(10);  // is this to long
 		//}
@@ -588,7 +595,7 @@ static inline void process_CAN_message() {
 		case CAN_TRACKING_REQ:
 			sending_tracking_data = 1;
 			sent_tracking_header = 0;
-			messages_to_send = RB_size(CAN_message_tx_buffer);
+			messages_to_send = 0; //RB_size(CAN_message_tx_buffer);
 			break;
 		default:
 			module_CAN_message_rx(&CAN_message_rx); // transfer CAN message to the user. The user can receive all other CAN messages.
@@ -601,6 +608,9 @@ static inline void process_CAN_message() {
 void module_init(void){
 
 	cli(); // enter critical section - disable interrupts
+
+	// init random
+	srand(time(NULL));
 
 	has_started = 0;
 	received_setup = 0;
@@ -632,6 +642,7 @@ void module_init(void){
 
 	init_CAN_message(&poll_response_message);
 	poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
+	poll_response_message.id =  module_uid_x_coord + (module_uid_y_coord * 20) + 1000;  // this should range from 1 to 200; 0 is the dispatcher -> just number the module numbers 
 
 	RB_init(CAN_message_tx_buffer); // init CAN message tx buffer
 
@@ -844,6 +855,10 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				}
 
 				/**** EXECUTE USER PROGRAM ****/
+				debug_till_var = sending_tracking_data;
+				if (sending_tracking_data && sent_tracking_header){
+					debug_till_var = 3;
+				}
 				loop(); // execute main loop defined in the main
 				break;
 			default:
@@ -851,26 +866,28 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 		}
 
 		// BLOCK FOR SENDING CAN MESSAGES 
-		// if(sending_tracking_data) {  // TODO: show giovanni
+		//if(sending_tracking_data) {  // TODO: show giovanni
 		if(0) {  // out command because we do not want to send any further tracking messages - work around 
 			if(!sent_tracking_header) {
-				sent_tracking_header = 1;
-
 				poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
 				poll_response_message.data[1] = messages_to_send;
 				poll_response_message.header.length = 2;
+				poll_response_message.id = get_random(500, 10000);
 
-				CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher);
+				if (CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher)==1){
+					sent_tracking_header = 1;
+				} else {
+					debug_till_var = 2;
+				}
 				_delay_ms(1);
-			}
-
-			if(messages_to_send > 0) {
-				// IMO we have to catch if message was transmitted successfully
-				send_next_CAN_message(); 
-				messages_to_send -= 1;
-				RB_popfront(CAN_message_tx_buffer);
-				//debug_till_var = 2;
-				_delay_ms(1);	
+			// }else if(messages_to_send > 0) {
+			// 	// IMO we have to catch if message was transmitted successfully
+			// 	if (send_next_CAN_message()==1){ 
+			// 		messages_to_send -= 1;
+			// 		if(!RB_empty(CAN_message_tx_buffer)){ RB_popfront(CAN_message_tx_buffer); }
+			// 		//debug_till_var = 2;
+			// 		_delay_ms(1);
+			// 	}
 			}
 			else {
 				sending_tracking_data = 0;

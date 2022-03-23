@@ -16,6 +16,8 @@
 #include <util/setbaud.h>
 #include <util/delay.h>    // for _delay_ms
 #include <string.h>        // for memcpy
+#include <stdlib.h>         // for rand()
+#include <time.h>
 
 volatile uint8_t packet_head = 0;
 volatile uint8_t packet_checksum = 0;
@@ -90,6 +92,10 @@ volatile uint32_t disp_ticks;
  */
 void CAN_message_tx_success_dummy(){}
 CAN_message_tx_success_t module_CAN_message_tx_success = CAN_message_tx_success_dummy;
+
+uint16_t get_random(uint16_t low, uint16_t high){
+	return ((rand() % (high-low)) + low);
+}
 
 void init_serial(void){
 //initialize uart for output of serial debugging info
@@ -270,6 +276,9 @@ int main() {
 	uint8_t i;
 	CAN_message_t* buffered_msg;
 
+	// init random
+	srand(time(NULL));
+
 	// register function callbacks
 	module_CAN_message_rx = CAN_rx;
 	//module_CAN_message_tx_success = CAN_tx_success;
@@ -285,7 +294,9 @@ int main() {
 	fCAN_debug_tx = 0;
 
 	init_CAN_message(&can_msg);
+	can_msg.id = get_random(0, 10);
 	init_CAN_message(&CAN_message_rx);
+	CAN_message_rx.id = get_random(0, 10);
 
 	RB_init(CAN_message_tx_buffer);
 
@@ -325,6 +336,8 @@ int main() {
 				// broadcasting - commands sent by the kilogui imo if i understood correctly  
         		while(!RB_empty(CAN_message_tx_buffer)) {
         			kilogrid_addr.type = ADDR_BROADCAST;
+        			// does this work
+        			RB_front(CAN_message_tx_buffer).id = get_random(10, 500); 
 					CAN_message_tx(&RB_front(CAN_message_tx_buffer), kilogrid_addr);  // TODO till, what the hack we broadcasting here 
 					RB_popfront(CAN_message_tx_buffer);  // here we pop front .. maybe is not called ?
 					_delay_ms(1);
@@ -350,7 +363,9 @@ int main() {
 					module_messages_received = 0;
 					can_msg.data[0] = CAN_TRACKING_REQ;  // here the can tracking request is triggered 
 					can_msg.header.length = 1;
+					RB_front(CAN_message_tx_buffer).id = get_random(10, 500);
 					CAN_message_tx(&can_msg, current_module_address);
+					_delay_ms(1);
 					module_message_send_timer = disp_ticks + MS_TO_TICKS(module_message_send_timeout);  // TODO till, never used ?
         		}					
 			}  // module finished sending all messages it has 
@@ -545,6 +560,8 @@ int main() {
 					buffered_msg = &RB_back(CAN_message_tx_buffer);
 					RB_pushback(CAN_message_tx_buffer);
 					init_CAN_message(buffered_msg);
+					// TODO till, assigned unique id to the messages to control the kilogrid ->probably bad bc hard coded 
+					buffered_msg->id = 22;
 
 					// first byte of serial packet is the type of command
 					switch(serial_packet.data[0]) {
@@ -564,6 +581,7 @@ int main() {
 							RB_pushback(CAN_message_tx_buffer);
 							init_CAN_message(buffered_msg);
 							buffered_msg->data[0] = CAN_MODULE_IDLE + 0x9F;
+							buffered_msg->id = 33;  // TILL: NEW ASSIGNMENT 
 
 							if(experiment_running) {  // this should never be true, bc it would enter experiment running on the top right ?
 								experiment_running = 0;
