@@ -82,7 +82,6 @@ extern volatile uint8_t  configuration_size;
 /** Configuration data. */
 extern volatile uint8_t  configuration[MODULE_CONFIGURATION_BUFFER_SIZE];
 
-
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
 #endif
@@ -142,6 +141,9 @@ void module_init(void);
  */
 void module_start(void (*setup)(void), void (*loop)(void));
 void module_enable_autostart();
+void CAN_send_broadcast_message(CAN_message_t*);
+uint8_t debug_till();
+uint16_t get_random(uint16_t low, uint16_t high);
 
 CAN_message_t* next_CAN_message();
 

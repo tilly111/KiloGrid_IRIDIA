@@ -46,7 +46,7 @@ After selecting the files
 
 ### setup the robots
 
-While the kilogrid is running you cannot configere the robots, thus you have to do it before you start the kilogrid-experiment.
+While the kilogrid is running you cannot configure the robots, thus you have to do it before you start the kilogrid-experiment.
 You can do the configuration of the robot after pressing setup (test if this is really the case!).
 
 Upload Kilobot Program:
@@ -88,9 +88,18 @@ make all
 ```
 
 ## Calibrating robots
-TODO
+In the window Kilobots Toolkit under Kilobot Commands, press Calibration. 
+This opens a new window where you can calibrate the robots. 
+This is done on a yellow field on the kilogrid (you can use the white stencil as a wall). 
+Put one robot on the field and start calibrating. 
+
+Sometimes other robots start to move, even if they are not on the yellow field. 
+Either close and open calibration again or put them on a tray. 
 
 ## Creating a new project 
+Copy a existing Project. 
+Then you have to adjust the .kconf file, Kilobot/KiloMain (robot controller) and Module/ModuleMain the module controller.  
+
 TODO
 
 
@@ -129,7 +138,59 @@ module:0-1
 x:10-11
 ```
 
-### TODO
+## Debugging 
+
+### If modules stop working
+If a module stops working you also cannot stop the experiment. 
+What you have to do is, first start the other computer, logg in on littleboy, open a terminal:
+
+```
+cd Documents/SmartArena/src/CellBootloader/build
+```
+
+Then you have to connect this computer with the not working cell (use an usb-usb cable and the AVRISP tool).
+If the connection works the AVRISP tool should light up green. 
+
+Then execute 
+
+```
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:CellBootloader.hex:i" -v 
+```
+
+(see https://diode.group.shef.ac.uk/kilobots/index.php/Kilobot_Firmware for command).
+
+Then it should bootload/reset the module and it should work again. 
+
+What can be tried is using the PC which is used for controlling the kilogrid, open Ubuntu there and do the same steps.
+
+The bootfile file is at 
+
+```
+cd /mnt/c/kilogrid_software/kilogrid_software/src/module/build/module_bootloader.hex
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:module_bootloader.hex:i" -v
+```
+
+### For setting the Dispatcher
+First, backing up the running code:
+```
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:r:Dispatcher.hex:i" -v
+```
+This should download the current .hex file. 
+This seems to work lol. 
+
+Second, uploading should be then the same as to some module:
+``` 
+sudo avrdude -p m328p -P usb -c avrispmkII -U "flash:w:Dispatcher.hex:i" -v
+```
+
+Finally, the last important thing is how to compile the code aka create dispatcher.hex 
+``` 
+cd /mnt/c/kilogrid_software/kilogrid_software/src/dispatcher/
+make all
+```
+This seems to work as well.
+
+PAY ATTENTION THE FILES ARE CASE SENSITIVE!
 
 ## General advice for running experiments 
 
@@ -156,7 +217,14 @@ states
 
 The robots need to run before the kilogrid, e.g., start the robot controller, than the kilogrid controller (probably you have to send a start/init msg to the robots)
 
+First start the kilogrid, than the kilobot toolkit - otherwise you get a connection error (can be fixed by disconnecting and then reconnecting)
 
+### Useful weblinks
 
+https://diode.group.shef.ac.uk/kilobots/index.php/Kilobots
 
+https://kilobotics.com/docs/index.html
+
+Documentation about the MCP2515 (https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf)
+or check on the local machine under c:/Manuals/
 
