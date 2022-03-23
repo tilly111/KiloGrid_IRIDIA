@@ -18,7 +18,7 @@
 
 /**
  *  @brief CAN message types enumeration. New types must be added at the end of the enumeration, for backward compatibility of the code with previous revisions, and more importantly with the module bootloader firmware.
- *  Maximum 2^6 = 64 types are alloved, because serialize_tracking_message uses the highest 2 bits for the module identifier.
+ *  Maximum 2^6 = 64 types are allowed, because serialize_tracking_message uses the highest 2 bits for the module identifier.
  */
 typedef enum{
     CAN_MODULE_USER = 0x00,
@@ -43,7 +43,7 @@ typedef enum{
 	CAN_MODULE_DATA,
     CAN_TRACKING_KILOBOT_START,
 	CAN_TRACKING_REQ,
-    CAN_MODULE_TO_MODULE            // TODO, by till, this msg type is used by my messages - to make sure that my msgs have a unique type - if it works probably rename to CAN_MODULE_TO_MODULE
+    CAN_MODULE_TO_MODULE           // TODO, by till, this msg type is used by my messages - to make sure that my msgs have a unique type - if it works probably rename to CAN_MODULE_TO_MODULE
 } CAN_message_type_t;
 
 /**** CALLBACKS DEFINITIONS ****/

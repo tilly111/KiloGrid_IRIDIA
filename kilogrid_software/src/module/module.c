@@ -1,5 +1,4 @@
 #include <stdlib.h>         // for rand()
-#include <time.h>
 #include <string.h>         // for memcpy
 #include <avr/wdt.h>        // watch dog timer
 #include <avr/interrupt.h>
@@ -35,7 +34,7 @@ volatile uint32_t module_ticks;     ///< internal clock (updated in tx ISR)
 static volatile enum {
 	MODULE_INIT = 0x00,
 	/**
-	 * @brief Triggered by receiving a CAN_MODULE_IDLE message. Currently
+	 * @brief Triggered by receiving a CAN_MODULE_IDLE message. Currently
 	 * pulsing LEDs indicate this state.
 	 */
 	MODULE_IDLE,
@@ -208,6 +207,9 @@ volatile uint8_t sent_tracking_header = 0;
 
 kilogrid_address_t CAN_address_to_dispatcher;
 
+// DEBUG feature/can_broadcast_between_modules: separating tracking data code with new feature
+kilogrid_address_t broadcast_to_modules;
+
 volatile uint8_t poll_debug_led_toggle = 0;
 
 CAN_message_t poll_response_message;
@@ -258,23 +260,6 @@ IR_message_rx_t module_IR_message_rx = IR_message_rx_dummy;
  */
 IR_message_tx_success_t module_IR_message_tx_success = IR_message_tx_success_dummy;
 
-// TODO till, add some buffer for sending regular messages
-CAN_message_t CAN_buffer_message_tx;  // TODO rename!!!
-kilogrid_address_t CAN_buffer_address_tx;
-// flag for signaling that the user wants to send a message 
-uint8_t send_module_to_module_msg_flag;
-uint8_t debug_till_var = 0; 
-
-
-
-uint8_t debug_till(){
-	return debug_till_var;
-}
-
-uint16_t get_random(uint16_t low, uint16_t high){
-	return ((rand() % (high-low)) + low);
-}
-
 /**** PRIVATE FUNCTIONS ****/
 
 /**
@@ -286,28 +271,20 @@ uint16_t get_random(uint16_t low, uint16_t high){
  */
 uint8_t send_next_CAN_message(){
 	if(!RB_empty(CAN_message_tx_buffer)){
-		// TODO: does this work like this!?!
-		//debug_till_var = 0;
-		//if (!debug_till_var){
-		// debug_till_var = CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
-		RB_front(CAN_message_tx_buffer).id = get_random(10000, 20000); 
-		return CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
-		//	_delay_ms(10);  // is this to long
-		//}
-		// TODO: this is miss leading because it could be the case that no message was send and you still return 1?!?
-		// should be more like 
-		// return CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
-		// or do i missunderstand something ?
+		CAN_message_tx(&RB_front(CAN_message_tx_buffer), CAN_address_to_dispatcher);
+		return 1;
 	}
-	return 2;  // error try to send from empty buffer should not occur 
+	return 0;
 }
 
-// this method should allow you to send some can messages as you want 
-void CAN_send_broadcast_message(CAN_message_t* msg){
-	init_CAN_message(&CAN_buffer_message_tx);
-	CAN_buffer_message_tx = *msg;  // check if we copy the content here!
-	//CAN_buffer_address_tx = addr;  // TODO do we copy the content  
-	send_module_to_module_msg_flag = 1;
+// DEBUG feature/can_broadcast_between_modules: separating tracking data code with new feature
+// Only the kilogrid address differs here. It needs to be initialized properly to work.
+uint8_t send_next_CAN_message_broadcast_to_modules(){
+	if(!RB_empty(CAN_message_tx_buffer)){
+		CAN_message_tx(&RB_front(CAN_message_tx_buffer), broadcast_to_modules);
+		return 1;
+	}
+	return 0;
 }
 
 void CAN_message_sent(){
@@ -595,8 +572,9 @@ static inline void process_CAN_message() {
 		case CAN_TRACKING_REQ:
 			sending_tracking_data = 1;
 			sent_tracking_header = 0;
-			messages_to_send = 0; //RB_size(CAN_message_tx_buffer);
+			messages_to_send = RB_size(CAN_message_tx_buffer);
 			break;
+
 		default:
 			module_CAN_message_rx(&CAN_message_rx); // transfer CAN message to the user. The user can receive all other CAN messages.
 			break;
@@ -608,9 +586,6 @@ static inline void process_CAN_message() {
 void module_init(void){
 
 	cli(); // enter critical section - disable interrupts
-
-	// init random
-	srand(time(NULL));
 
 	has_started = 0;
 	received_setup = 0;
@@ -638,15 +613,18 @@ void module_init(void){
 	// initialized reused address descriptor in the direction of the dispatcher
 	CAN_address_to_dispatcher.x = module_uid_x_coord;
 	CAN_address_to_dispatcher.y = module_uid_y_coord;
-	CAN_address_to_dispatcher.type = ADDR_DISPATCHER;
+	CAN_address_to_dispatcher.type = ADDR_DISPATCHER;	
+	
+	broadcast_to_modules.x = module_uid_x_coord;
+	broadcast_to_modules.y = module_uid_y_coord;
+	broadcast_to_modules.type = ADDR_BROADCAST;
 
 	init_CAN_message(&poll_response_message);
 	poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
-	poll_response_message.id =  module_uid_x_coord + (module_uid_y_coord * 20) + 1000;  // this should range from 1 to 200; 0 is the dispatcher -> just number the module numbers 
 
 	RB_init(CAN_message_tx_buffer); // init CAN message tx buffer
 
-	module_CAN_message_tx_success = CAN_message_sent; // register function callback  - TODO is this a problem? calls empty method which should remove the first element of the buffer????
+	module_CAN_message_tx_success = CAN_message_sent; // register function callback
 
 	// Setup Analog Comparator (enable IR reception) and ADC (distance measurements)
 	ACOMP_SETUP();
@@ -655,7 +633,8 @@ void module_init(void){
 	// Setup peripherals
 	init_serial();
 	init_module_LED();
-	init_ModuleCAN(module_uid_x_coord, module_uid_y_coord);
+	init_ModuleCAN(module_uid_x_coord, module_uid_y_coord); // TODO: replaced with following
+	// init_module_CAN(module_uid_x_coord, module_uid_y_coord);
 	init_module_IR();
 
 	brightness_dir = 1; // increasing
@@ -689,17 +668,6 @@ void module_init(void){
 	for(i=0; i<MODULE_CONFIGURATION_BUFFER_SIZE; i++) {
 		configuration[i] = 0;
 	}
-
-	// TODO till, init buffer for sending messages: prepare also an address to broadcast
-	// this is the buffer to where you want to send your messages to; inited with broadcast because i only use broadcast; but can be changed   
-	CAN_buffer_address_tx.type = ADDR_LOW_PRIO_BROADCAST; // see communication/kilogrid.h for further information
-    CAN_buffer_address_tx.x = 0;
-    CAN_buffer_address_tx.y = 0;
-    // init message buffer 
-    //CAN_buffer_message_tx* = NULL;
-    init_CAN_message(&CAN_buffer_message_tx); 
-    // init flag to 0, as we do not want to send 
-    send_module_to_module_msg_flag = 0;
 
 	cprints("Module initialized.");
 
@@ -840,11 +808,11 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 			case MODULE_RUNNING:
 				if(!has_started){
 					has_started = 1;
-					// first, broadcast RUN message to the Kilobots for a little while (we assume that all robots are in reset mode already) TODO needs to be a bit longer imo
+					// first, broadcast RUN message to the Kilobots for a little while (we assume that all robots are in reset mode already)
 					IR_setup_message.type = RUN;
 					set_all_LEDs(MAGENTA);
 
-					for(i = 0; i < 10; i++){  // is this a good way to implement it ?
+					for(i = 0; i < 10; i++){
 						send_IR_message(&IR_setup_message, CELL_00);
 						send_IR_message(&IR_setup_message, CELL_01);
 						send_IR_message(&IR_setup_message, CELL_02);
@@ -855,52 +823,42 @@ void module_start(void (*setup)(void), void (*loop)(void)) {
 				}
 
 				/**** EXECUTE USER PROGRAM ****/
-				debug_till_var = sending_tracking_data;
-				if (sending_tracking_data && sent_tracking_header){
-					debug_till_var = 3;
-				}
 				loop(); // execute main loop defined in the main
 				break;
 			default:
 				break;
 		}
 
-		// BLOCK FOR SENDING CAN MESSAGES 
-		//if(sending_tracking_data) {  // TODO: show giovanni
-		if(0) {  // out command because we do not want to send any further tracking messages - work around 
+		if(sending_tracking_data) {
 			if(!sent_tracking_header) {
+				sent_tracking_header = 1;
+
 				poll_response_message.data[0] = CAN_TRACKING_KILOBOT_START;
 				poll_response_message.data[1] = messages_to_send;
 				poll_response_message.header.length = 2;
-				poll_response_message.id = get_random(500, 10000);
 
-				if (CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher)==1){
-					sent_tracking_header = 1;
-				} else {
-					debug_till_var = 2;
-				}
+				CAN_message_tx(&poll_response_message, CAN_address_to_dispatcher);
 				_delay_ms(1);
-			// }else if(messages_to_send > 0) {
-			// 	// IMO we have to catch if message was transmitted successfully
-			// 	if (send_next_CAN_message()==1){ 
-			// 		messages_to_send -= 1;
-			// 		if(!RB_empty(CAN_message_tx_buffer)){ RB_popfront(CAN_message_tx_buffer); }
-			// 		//debug_till_var = 2;
-			// 		_delay_ms(1);
-			// 	}
+			}
+
+			if(messages_to_send > 0) {
+				messages_to_send -= 1;
+
+				send_next_CAN_message();
+				RB_popfront(CAN_message_tx_buffer);
 			}
 			else {
 				sending_tracking_data = 0;
 				poll_debug_led_toggle = !poll_debug_led_toggle;
 			}
 		}
-		else {  // if there is no tracking data to be send, send my stuff, dirty hack i know 
-			if (send_module_to_module_msg_flag){
-				send_module_to_module_msg_flag = 0;
-				CAN_message_tx(&CAN_buffer_message_tx, CAN_buffer_address_tx);
-				_delay_ms(1);
-				
-			}
+		
+		// DEBUG feature/can_broadcast_between_modules: separating tracking data code with new feature
+		if(messages_to_send > 0) {
+			messages_to_send -= 1;
+
+			send_next_CAN_message_broadcast_to_modules();
+			RB_popfront(CAN_message_tx_buffer);
 		}
 
 		// reset has_started flag if state is not equal to MODULE_RUNNING
@@ -930,6 +888,21 @@ inline CAN_message_t* next_CAN_message() {
 	return ret;
 }
 
+// DEBUG feature/can_broadcast_between_modules
+// Duplicate function not to break tracking code (here we increment messages_to_send)
+inline CAN_message_t* next_CAN_message_to_modules() {
+	CAN_message_t* ret = NULL;
+
+	if(!RB_full(CAN_message_tx_buffer)) {
+		ret = &RB_back(CAN_message_tx_buffer);
+		RB_pushback(CAN_message_tx_buffer); // move internal pointer to the next element
+	}
+	
+	messages_to_send += 1; // this will trigger the send through the main loop (while(1))
+
+	return ret;
+}
+
 /**
  * @brief Interrupt Service Routine for INT0 (PD2 - nCAN_INT pin).
  * The ISR is triggered by the reception of CAN messages.
@@ -937,25 +910,7 @@ inline CAN_message_t* next_CAN_message() {
  */
 #ifndef CAN_INTERRUPT_DISABLE
 ISR(INT0_vect) {
-	// TODO: I do not know how the interrupts are handled. There are 2 external interrupts in the atmega328p (INT0_vect, INT1_vect)
-	//  see https://www.arxterra.com/10-atmega328p-interrupts/ 
-	//  In the following is a implementation, which, assuming it is always the same interrupt triggering the same isr, maybe handles 
-	//  if we observe an overflow... but it is not tested nor correct, just a starting point. Also I am not sure if these interrupts are 
-	//  activated 
-
-	// uint8_t eflg_register = mcp2515_read_register(EFLG);
-
-	// if (BIT_IS_SET(eflg_register,RX0OVR)){ // buffer RXB0 has an overflow 
-	// 	// handle overflow 
-	// 	mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
-	// 	mcp2515_bit_modify(EFLG, (1<<RX0OVR), 0);
-	// }
-	// else if (BIT_IS_SET(eflg_register,RX1OVR)){  // buffer RXB1 has an overflow 
-	// 	mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
-	// 	mcp2515_bit_modify(EFLG, (1<<RX1OVR), 0);
-	// }else{  // just received a new can msg
-		mcp2515_get_message(&CAN_message_rx_buffer); // retrieve CAN message
-		process_CAN_message();
-	// }
+	mcp2515_get_message(&CAN_message_rx_buffer); // retrieve CAN message
+	process_CAN_message();
 }
 #endif
